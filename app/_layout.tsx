@@ -9,7 +9,7 @@ import { Colors } from '../constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const APP_DATA_VERSION = 4;
+const APP_DATA_VERSION = 5;
 
 function OnboardingGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();

@@ -109,24 +109,32 @@ export default function SquadScreen() {
     return getPlayersByTeam(state.favoriteTeam);
   }, [state.favoriteTeam]);
 
+  // Set of unlocked player IDs — respects DEV_FLAGS (UNLOCK_21_PLAYERS_FOR_TESTS)
+  const unlockedIds = useMemo(
+    () => new Set(getUnlockedPlayers()),
+    [getUnlockedPlayers]
+  );
+
   // Total unlocked across ALL teams (for Stage B gate)
-  const totalUnlocked = useMemo(() => getUnlockedPlayers().length, [getUnlockedPlayers]);
+  const totalUnlocked = unlockedIds.size;
   const canStartStageB = totalUnlocked >= STAGE_B_GOAL;
   const stageBProgress = Math.min(totalUnlocked / STAGE_B_GOAL, 1);
 
-  // Count unlocked in this team for display
+  // Count unlocked in this team for subtitle
   const teamUnlocked = useMemo(
-    () => teamPlayers.filter((p) => getPlayerProgress(p.id).unlocked).length,
-    [teamPlayers, getPlayerProgress]
+    () => teamPlayers.filter((p) => unlockedIds.has(p.id)).length,
+    [teamPlayers, unlockedIds]
   );
 
   const renderItem = ({ item }: { item: Player }) => {
-    const progress = getPlayerProgress(item.id);
+    const isUnlocked = unlockedIds.has(item.id);
+    // In DEV unlock mode progress.correctAnswers is 0 but player is considered unlocked
+    const correctAnswers = isUnlocked ? 4 : getPlayerProgress(item.id).correctAnswers;
     return (
       <PlayerSlot
         player={item}
-        isUnlocked={progress.unlocked}
-        correctAnswers={progress.correctAnswers}
+        isUnlocked={isUnlocked}
+        correctAnswers={correctAnswers}
         onPress={() => router.push(`/wallpaper/${item.id}`)}
       />
     );
@@ -143,24 +151,32 @@ export default function SquadScreen() {
             {teamPlayers.length > 0 && `  ·  ${teamUnlocked}/${teamPlayers.length} פתוחים`}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.resetBtn}
-          onPress={() =>
-            Alert.alert('איפוס נתונים', 'למחוק את כל ההתקדמות ולחזור לבחירת קבוצה?', [
-              { text: 'ביטול', style: 'cancel' },
-              {
-                text: 'איפוס',
-                style: 'destructive',
-                onPress: async () => {
-                  await resetGameState();
-                  router.replace('/onboarding' as never);
+        <View style={styles.headerBtns}>
+          <TouchableOpacity
+            style={styles.resetBtn}
+            onPress={() => router.replace('/onboarding' as never)}
+          >
+            <Text style={styles.resetText}>🔄 קבוצה</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.resetBtn, styles.resetBtnRed]}
+            onPress={() =>
+              Alert.alert('איפוס נתונים', 'למחוק את כל ההתקדמות?', [
+                { text: 'ביטול', style: 'cancel' },
+                {
+                  text: 'איפוס',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await resetGameState();
+                    router.replace('/onboarding' as never);
+                  },
                 },
-              },
-            ])
-          }
-        >
-          <Text style={styles.resetText}>🔄 החלף קבוצה</Text>
-        </TouchableOpacity>
+              ])
+            }
+          >
+            <Text style={[styles.resetText, styles.resetTextRed]}>🗑 איפוס</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stage B progress card */}
@@ -241,6 +257,7 @@ const styles = StyleSheet.create({
   headerLeft: { flex: 1 },
   title: { color: Colors.text, fontSize: Fonts.sizes.xl, fontWeight: '900' },
   subtitle: { color: Colors.textMuted, fontSize: Fonts.sizes.sm, marginTop: 2 },
+  headerBtns: { flexDirection: 'row', gap: 6, marginLeft: Spacing.xs },
   resetBtn: {
     backgroundColor: Colors.card,
     borderWidth: 1,
@@ -248,9 +265,10 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 6,
-    marginLeft: Spacing.sm,
   },
+  resetBtnRed: { borderColor: '#FF4444' + '55' },
   resetText: { color: Colors.textMuted, fontSize: Fonts.sizes.xs, fontWeight: '700' },
+  resetTextRed: { color: '#FF8D8D' },
 
   stageBCard: {
     marginHorizontal: Spacing.base,
