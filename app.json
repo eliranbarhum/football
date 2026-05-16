@@ -46,7 +46,8 @@
         {
           "photosPermission": "Allow Football Stars to save wallpapers to your gallery.",
           "savePhotosPermission": "Allow Football Stars to save wallpapers to your gallery.",
-          "isAccessMediaLocationEnabled": true
+          "isAccessMediaLocationEnabled": true,
+          "granularPermissions": ["photo"]
         }
       ],
       [

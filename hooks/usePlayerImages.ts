@@ -35,7 +35,28 @@ export function usePlayerImages(players: Player[]) {
     });
     setImages(initialState);
 
-    const uncached = players.filter((p) => !imageCache[p.searchName]);
+    // First: resolve players with directImageUrl immediately (no API call)
+    const withDirect = players.filter((p) => p.directImageUrl);
+    withDirect.forEach((player) => {
+      imageCache[player.searchName] = {
+        thumbUrl: player.directImageUrl!,
+        fanartUrl: null,
+      };
+      setImages((prev) => ({
+        ...prev,
+        [player.id]: {
+          playerId: player.id,
+          thumbUrl: player.directImageUrl!,
+          fanartUrl: null,
+          loading: false,
+          error: false,
+        },
+      }));
+    });
+
+    const uncached = players.filter(
+      (p) => !p.directImageUrl && !imageCache[p.searchName]
+    );
 
     const chunks: Player[][] = [];
     for (let i = 0; i < uncached.length; i += 4) {
@@ -113,6 +134,15 @@ export function useSinglePlayerImage(player: Player | null) {
 
   useEffect(() => {
     if (!player) return;
+
+    // Use directImageUrl immediately — no API call needed
+    if (player.directImageUrl) {
+      imageCache[player.searchName] = { thumbUrl: player.directImageUrl, fanartUrl: null };
+      setThumbUrl(player.directImageUrl);
+      setFanartUrl(null);
+      setLoading(false);
+      return;
+    }
 
     if (imageCache[player.searchName]) {
       setThumbUrl(imageCache[player.searchName].thumbUrl);

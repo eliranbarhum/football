@@ -44,11 +44,11 @@ const TEAM_GROUPS = [
   { name: 'Inter Milan',  teamFilter: 'Inter Milan',        color: '#010E80', secondary: '#000000', badgeUrl: 'https://crests.football-data.org/108.svg' },
   { name: 'AC Milan',     teamFilter: 'AC Milan',           color: '#FB090B', secondary: '#000000', badgeUrl: 'https://crests.football-data.org/98.svg' },
   { name: 'Juventus',     teamFilter: 'Juventus',           color: '#000000', secondary: '#FFFFFF', badgeUrl: 'https://crests.football-data.org/109.svg' },
-  // Israeli teams - use TheSportsDB API with delay
-  { name: 'מכבי ת״א',    teamFilter: 'Maccabi Tel Aviv',   color: '#FFD700', secondary: '#003580', badgeUrl: null as string | null, searchName: 'Maccabi Tel Aviv' },
-  { name: 'ביתר י-ם',    teamFilter: 'Beitar Jerusalem',   color: '#FFD700', secondary: '#000000', badgeUrl: null as string | null, searchName: 'Beitar Jerusalem' },
-  { name: 'מכבי חיפה',   teamFilter: 'Maccabi Haifa',      color: '#006600', secondary: '#FFFFFF', badgeUrl: null as string | null, searchName: 'Maccabi Haifa' },
-  { name: 'הפועל ב״ש',   teamFilter: 'Hapoel Beer Sheva',  color: '#CC0000', secondary: '#FFFFFF', badgeUrl: null as string | null, searchName: 'Hapoel Beer Sheva' },
+  // קבוצות ישראל — גרדיאנט + ראשי תיבות (ללא API)
+  { name: 'מכבי ת״א',    teamFilter: 'Maccabi Tel Aviv',   color: '#FFD700', secondary: '#003580', badgeUrl: 'gradient' },
+  { name: 'ביתר י-ם',    teamFilter: 'Beitar Jerusalem',   color: '#FFD700', secondary: '#000000', badgeUrl: 'gradient' },
+  { name: 'מכבי חיפה',   teamFilter: 'Maccabi Haifa',      color: '#006600', secondary: '#FFFFFF', badgeUrl: 'gradient' },
+  { name: 'הפועל ב״ש',   teamFilter: 'Hapoel Beer Sheva',  color: '#CC0000', secondary: '#FFFFFF', badgeUrl: 'gradient' },
 ];
 
 type TeamGroup = typeof TEAM_GROUPS[number];
@@ -75,11 +75,18 @@ function TeamCard({
   onPress: () => void;
   apiDelay: number;
 }) {
+  // 'gradient' = show colored gradient + initials (no logo, no API)
+  // null        = fetch from TheSportsDB
+  // https://…  = use directly
+  const isGradientOnly = item.badgeUrl === 'gradient';
+  const hasHardcodedUrl = item.badgeUrl && item.badgeUrl !== 'gradient';
+
   const [fetchedBadgeUrl, setFetchedBadgeUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(item.badgeUrl === null);
 
   useEffect(() => {
-    if (item.badgeUrl !== null) return; // has hardcoded URL, no fetch needed
+    if (hasHardcodedUrl || isGradientOnly) return; // no API needed
+    if (item.badgeUrl !== null) return;
     let cancelled = false;
     const searchName = (item as { searchName?: string }).searchName ?? item.name;
 
@@ -96,9 +103,9 @@ function TeamCard({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [item, apiDelay]);
+  }, [item, apiDelay, hasHardcodedUrl, isGradientOnly]);
 
-  const resolvedBadgeUrl = item.badgeUrl ?? fetchedBadgeUrl;
+  const resolvedBadgeUrl = hasHardcodedUrl ? item.badgeUrl : fetchedBadgeUrl;
 
   return (
     <TouchableOpacity onPress={onPress} style={styles.teamCard} activeOpacity={0.8}>

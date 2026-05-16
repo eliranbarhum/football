@@ -13,6 +13,8 @@ export interface Player {
   searchName: string;
   isFeatured: boolean;
   isPopular: boolean;
+  /** URL ישיר לתמונה — עוקף את TheSportsDB API */
+  directImageUrl?: string;
 }
 
 export const PLAYERS: Player[] = [
@@ -96,15 +98,90 @@ export const PLAYERS: Player[] = [
   { id: '133', name: 'Karim Benzema', displayName: 'Benzema', team: 'Al Ittihad', teamShort: 'ITT', nationality: 'France', position: 'Forward', league: 'Saudi Pro League', jerseyNumber: 9, teamColor: '#F7C61E', teamColorSecondary: '#000000', searchName: 'Karim Benzema', isFeatured: false, isPopular: true },
   { id: '134', name: 'Victor Osimhen', displayName: 'Osimhen', team: 'Galatasaray', teamShort: 'GAL', nationality: 'Nigeria', position: 'Forward', league: 'Super Lig', jerseyNumber: 9, teamColor: '#E30A17', teamColorSecondary: '#F5B400', searchName: 'Victor Osimhen', isFeatured: false, isPopular: true },
 
-  // ===== ישראל — שחקנים =====
-  { id: '200', name: 'Liel Abada', displayName: 'Abada', team: 'Charlotte FC', teamShort: 'CLT', nationality: 'Israel', position: 'Forward', league: 'MLS', jerseyNumber: 11, teamColor: '#1A85C8', teamColorSecondary: '#D0A82E', searchName: 'Liel Abada', isFeatured: true, isPopular: true },
-  { id: '201', name: 'Manor Solomon', displayName: 'Solomon', team: 'Fulham', teamShort: 'FUL', nationality: 'Israel', position: 'Forward', league: 'Premier League', jerseyNumber: 17, teamColor: '#CC0000', teamColorSecondary: '#000000', searchName: 'Manor Solomon', isFeatured: true, isPopular: true },
-  { id: '202', name: 'Oscar Gloukh', displayName: 'Gloukh', team: 'RB Leipzig', teamShort: 'RBL', nationality: 'Israel', position: 'Midfielder', league: 'Bundesliga', jerseyNumber: 18, teamColor: '#DD0741', teamColorSecondary: '#FFFFFF', searchName: 'Oscar Gloukh', isFeatured: true, isPopular: true },
-  { id: '203', name: 'Eran Zahavi', displayName: 'Zahavi', team: 'Maccabi Tel Aviv', teamShort: 'MTA', nationality: 'Israel', position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 10, teamColor: '#FFD700', teamColorSecondary: '#003580', searchName: 'Eran Zahavi', isFeatured: false, isPopular: true },
+  // ===== ישראל — שחקנים (עם URL ישיר לתמונה) =====
+  {
+    id: '200', name: 'Liel Abada', displayName: 'Abada', team: 'Charlotte FC', teamShort: 'CLT',
+    nationality: 'Israel', position: 'Forward', league: 'MLS', jerseyNumber: 11,
+    teamColor: '#1A85C8', teamColorSecondary: '#D0A82E', searchName: 'Liel Abada',
+    isFeatured: true, isPopular: true,
+    directImageUrl: 'https://r2.thesportsdb.com/images/media/player/cutout/6141w71771755150.png',
+  },
+  {
+    id: '201', name: 'Manor Solomon', displayName: 'Solomon', team: 'Fulham', teamShort: 'FUL',
+    nationality: 'Israel', position: 'Forward', league: 'Premier League', jerseyNumber: 17,
+    teamColor: '#CC0000', teamColorSecondary: '#000000', searchName: 'Manor Solomon',
+    isFeatured: true, isPopular: true,
+    directImageUrl: 'https://r2.thesportsdb.com/images/media/player/cutout/8xfxe41762889351.png',
+  },
+  {
+    id: '202', name: 'Oscar Gloukh', displayName: 'Gloukh', team: 'RB Leipzig', teamShort: 'RBL',
+    nationality: 'Israel', position: 'Midfielder', league: 'Bundesliga', jerseyNumber: 18,
+    teamColor: '#DD0741', teamColorSecondary: '#FFFFFF', searchName: 'Oscar Gloukh',
+    isFeatured: true, isPopular: true,
+    directImageUrl: 'https://r2.thesportsdb.com/images/media/player/cutout/kxjkcn1759498060.png',
+  },
+  {
+    id: '203', name: 'Eran Zahavi', displayName: 'Zahavi', team: 'Maccabi Tel Aviv', teamShort: 'MTA',
+    nationality: 'Israel', position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 10,
+    teamColor: '#FFD700', teamColorSecondary: '#003580', searchName: 'Eran Zahavi',
+    isFeatured: false, isPopular: true,
+    directImageUrl: 'https://r2.thesportsdb.com/images/media/player/cutout/v2o9oc1633260192.png',
+  },
+  // ישראלים ללא תמונה — גרדיאנט עם ראשי תיבות
   { id: '204', name: 'Dia Saba', displayName: 'Saba', team: 'Maccabi Tel Aviv', teamShort: 'MTA', nationality: 'Israel', position: 'Midfielder', league: 'Israeli Premier League', jerseyNumber: 8, teamColor: '#FFD700', teamColorSecondary: '#003580', searchName: 'Dia Saba', isFeatured: false, isPopular: false },
   { id: '205', name: 'Maor Buzaglo', displayName: 'Buzaglo', team: 'Hapoel Beer Sheva', teamShort: 'HBS', nationality: 'Israel', position: 'Midfielder', league: 'Israeli Premier League', jerseyNumber: 7, teamColor: '#CC0000', teamColorSecondary: '#FFFFFF', searchName: 'Maor Buzaglo', isFeatured: false, isPopular: true },
   { id: '206', name: 'Ali Mohamed', displayName: 'Ali Mohamed', team: 'Maccabi Haifa', teamShort: 'MHF', nationality: 'Israel', position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 10, teamColor: '#006600', teamColorSecondary: '#FFFFFF', searchName: 'Ali Mohammed', isFeatured: false, isPopular: false },
-  { id: '207', name: 'Dan Glazer', displayName: 'Glazer', team: 'Beitar Jerusalem', teamShort: 'BEI', nationality: 'Israel', position: 'Midfielder', league: 'Israeli Premier League', jerseyNumber: 8, teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Dan Glazer', isFeatured: false, isPopular: false },
+
+  // ===== ביתר ירושלים =====
+  {
+    id: '210', name: 'Omer Atzili', displayName: 'אציל', team: 'Beitar Jerusalem', teamShort: 'BEI',
+    nationality: 'Israel', position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 77,
+    teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Omer Atzili',
+    isFeatured: true, isPopular: true,
+    directImageUrl: 'https://r2.thesportsdb.com/images/media/player/cutout/eb9m0w1669367870.png',
+  },
+  {
+    id: '211', name: 'Dor Micha', displayName: 'מיכה', team: 'Beitar Jerusalem', teamShort: 'BEI',
+    nationality: 'Israel', position: 'Midfielder', league: 'Israeli Premier League', jerseyNumber: 15,
+    teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Dor Micha',
+    isFeatured: false, isPopular: true,
+  },
+  {
+    id: '212', name: 'Yarden Shua', displayName: 'שועה', team: 'Beitar Jerusalem', teamShort: 'BEI',
+    nationality: 'Israel', position: 'Midfielder', league: 'Israeli Premier League', jerseyNumber: 7,
+    teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Yarden Shua',
+    isFeatured: false, isPopular: false,
+  },
+  {
+    id: '213', name: 'Ori Dahan', displayName: 'דהן', team: 'Beitar Jerusalem', teamShort: 'BEI',
+    nationality: 'Israel', position: 'Midfielder', league: 'Israeli Premier League', jerseyNumber: 20,
+    teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Ori Dahan',
+    isFeatured: false, isPopular: false,
+  },
+  {
+    id: '214', name: 'Gil Cohen', displayName: 'כהן', team: 'Beitar Jerusalem', teamShort: 'BEI',
+    nationality: 'Israel', position: 'Defender', league: 'Israeli Premier League', jerseyNumber: 5,
+    teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Gil Cohen',
+    isFeatured: false, isPopular: false,
+  },
+  {
+    id: '215', name: 'Ziv Ben Shimul', displayName: 'בן שימול', team: 'Beitar Jerusalem', teamShort: 'BEI',
+    nationality: 'Israel', position: 'Defender', league: 'Israeli Premier League', jerseyNumber: 6,
+    teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Ziv Ben Shimul',
+    isFeatured: false, isPopular: false,
+  },
+  {
+    id: '216', name: 'Yarin Levy', displayName: 'לוי', team: 'Beitar Jerusalem', teamShort: 'BEI',
+    nationality: 'Israel', position: 'Midfielder', league: 'Israeli Premier League', jerseyNumber: 8,
+    teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Yarin Levy',
+    isFeatured: false, isPopular: false,
+  },
+  {
+    id: '217', name: 'Timothy Muzie', displayName: 'מוזי', team: 'Beitar Jerusalem', teamShort: 'BEI',
+    nationality: 'Israel', position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 11,
+    teamColor: '#FFD700', teamColorSecondary: '#000000', searchName: 'Timothy Muzie',
+    isFeatured: false, isPopular: false,
+  },
 ];
 
 export const LEAGUES = [

@@ -115,7 +115,11 @@ export default function WallpaperDetailScreen() {
         if (success) {
           showToast('✅ נשמר בגלריה!');
         } else {
-          Alert.alert('שגיאה', 'ההורדה נכשלה. ודא שניתנה הרשאה לגשת לגלריה.');
+          Alert.alert(
+            'שמירה נכשלה',
+            'ב-Expo Go לא ניתן לשמור לגלריה בגלל מגבלות הרשאות.\n\nבגרסת ה-APK המלאה זה יעבוד מושלם! 🚀',
+            [{ text: 'הבנתי' }]
+          );
         }
       } else if (pendingAction === 'wallpaper') {
         const success = await setAsWallpaper(displayUrl, player.name);
