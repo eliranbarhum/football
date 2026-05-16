@@ -1,208 +1,831 @@
-# Football Stars - Agent Operating File (.ai)
+# .ai — מערכת ההגדרה המרכזית של הפרויקט
 
-## Purpose
-This file is the single source of truth for AI/code agents working on this repository.
-Every agent MUST read this file before making code changes.
-Every agent MUST update this file in the same PR/commit whenever behavior, flow, data model, routes, or UX rules change.
+## מטרה
+קובץ זה הוא מקור האמת (Source of Truth) עבור כל Agent, מודל AI, מפתח, כלי אוטומציה או מערכת שיוצרים, משנים, מנתחים או מתחזקים קוד בפרויקט.
+כל Agent שקורא את הקובץ חייב להבין: מה המוצר עושה, למה הוא קיים, מי המשתמשים, מה הארכיטקטורה, אילו שירותים מחוברים, אילו APIs קיימים, אילו תלויות קיימות, אילו סטנדרטים מחייבים, אילו מגבלות אסור להפר, מה הסביבה העסקית, מהם נהלי האבטחה, מהם תהליכי העבודה, כיצד מתקבלות החלטות, כיצד כותבים קוד בפרויקט, כיצד מתעדים, כיצד בודקים, כיצד פורסים, כיצד חוקרים תקלות, אילו הנחות יסוד קיימות, אילו סיכונים קיימים, אילו אינטגרציות עתידיות מתוכננות.
 
----
-
-## Product Summary
-Football Stars is an educational football app for kids (age 6-12), focused on Hebrew UX.
-Core loop:
-1. ילד בוחר קבוצה מועדפת במסך פתיחה.
-2. לומד על שחקנים ועונה על שאלות.
-3. פותח שחקנים אחרי 4 תשובות נכונות.
-4. בונה סגל.
-5. עובר לשלב B ומנהל עונת ליגה.
+Agent AI חייב להתייחס למסמך זה כאל Specification מחייב ולא כהמלצה.
 
 ---
 
-## Data Sources & Architecture
+# 1. Project Identity
 
-### Where does all data come from?
+## Project Name
+Football Stars
 
-#### Player Data (bio, stats, quiz)
-- **Source:** 100% hardcoded in `constants/players.ts` — compiled into the app bundle.
-- **No API calls.** No network requests for player data.
-- Fields per player: `name`, `displayName`, `team`, `league`, `position`, `jerseyNumber`,
-  `birthDate`, `birthPlace`, `height`, `weight`, `nationality`, `formerTeams`, `funFact`,
-  `teamColor`, `teamColorSecondary`, `isFeatured`, `isPopular`, `directImageUrl`, `quizQuestions[]`.
-- **Quiz questions:** Also hardcoded in `players.ts`. Each player has 4 questions,
-  each with 4 answer options and a `correctIndex`. Shuffled on every view in `wallpaper/[id].tsx`.
-- **Total players:** 112+ across 6 leagues.
-- **Adding/editing players:** Edit `constants/players.ts` directly. Redeploy app to users.
+## Internal Codename
+football-wallpapers
 
-#### Player Images
-- **Source:** `directImageUrl` field on each Player — a hardcoded CDN URL.
-- **CDN:** `r2.thesportsdb.com/images/media/player/cutout/...` (TheSportsDB R2 storage, free).
-- **No API key required.** Direct HTTPS URL to pre-fetched cutout PNG.
-- **No dynamic lookup.** URLs were manually copied from TheSportsDB and baked into `players.ts`.
-- **Israeli players (Beitar, Maccabi, etc.):** Most have no `directImageUrl` — show gradient fallback.
-- **When is the image fetched?** On first render of the image component (`expo-image`).
-  `expo-image` caches downloaded images on-device automatically.
-- **After first load:** Served from `expo-image` disk cache — no network request.
-- **Hook:** `hooks/usePlayerImages.ts` — pure `useMemo`, zero network calls, zero useEffect.
-  Just maps `player.directImageUrl` to the `PlayerImageData` structure. If URL is empty → `null`.
+## Project Type
+Mobile App — Consumer / Educational / Freemium
 
-#### Team Badges (Onboarding Screen)
-- **Source:** Hardcoded `BADGE_MAP` in `app/onboarding.tsx`.
-- **CDN:** `crests.football-data.org/{id}.svg` (football-data.org, free SVG crests, no API key).
-- **Loaded by:** `expo-image` on first render of the onboarding team grid.
-- **Cached by:** `expo-image` disk cache after first load.
-- **Israeli teams:** No entry in `BADGE_MAP` → render gradient circle with Hebrew initials (no network).
+## Short Description
+אפליקציית כדורגל חינוכית לילדים בגילאי 6-12. הילד בוחר קבוצה אהובה, לומד על שחקניה דרך כרטיסי מידע ושאלות ידע, פותח שחקנים, בונה סגל, מנהל עונת ליגה ומוריד טפטים לנייד.
 
-#### Game State / Progress
-- **Source:** `AsyncStorage` key `@football_stars_game`.
-- **Format:** Single JSON blob (see Data Model section below).
-- **Load:** Once on app start inside `useGameState` hook (`useEffect` → `AsyncStorage.getItem`).
-- **Save:** Synchronously on every state mutation via `save()` callback (`AsyncStorage.setItem`).
-- **No server sync.** Progress is local-only. Uninstalling the app = data lost.
-- **Version migration:** `appDataVersion` mismatch → reset state to DEFAULT_STATE → force onboarding.
+## Business Goal
+- יצירת הכנסה ממפרסמים (AdMob) מבסיס ילדים עם engagement גבוה
+- פוטנציאל לרישוי לבתי ספר ומועדוני ספורט
+- בניית brand בישראל כאפליקציית כדורגל מספר 1 לילדים
 
-#### AI Image Generation
-- **Source:** Live API call to `https://pollinations.ai/p/{prompt}?width=1024&height=1792&model=flux`
-- **Trigger:** User taps "צור תמונת AI" in `/(tabs)/generate`.
-- **No caching.** Each generation is a fresh HTTP request. New seed = new image.
-- **No API key.** Pollinations AI is free/open.
-- **Result:** URL returned, rendered in `<Image>`. Not persisted unless user downloads.
+## Main KPIs
+- DAU (Daily Active Users)
+- Session length ממוצע
+- מספר שחקנים שנפתחו לאורך הטמעה
+- CTR ו-RPM של AdMob
+- Retention יום 1 / יום 7 / יום 30
 
-#### Image Download / Share / Wallpaper
-- **Flow:** `services/imageService.ts` downloads image URL → `expo-file-system` saves to device cache →
-  `expo-media-library` creates asset in photo library (for download/wallpaper) or
-  `expo-sharing` shares the file (for share).
-- **Wallpaper on iOS/Android:** Save to gallery; user sets it manually from Photos. No native wallpaper API.
-
-### Summary Table
-
-| Data | Source | Network? | Cached? | On every open? |
-|------|--------|----------|---------|----------------|
-| Player bio / quiz | `constants/players.ts` (bundle) | ❌ Never | N/A (bundle) | ❌ No |
-| Player images | `r2.thesportsdb.com` CDN | ✅ First load | ✅ expo-image disk cache | ❌ After first load |
-| Team badges | `crests.football-data.org` SVG | ✅ First load | ✅ expo-image disk cache | ❌ After first load |
-| Game progress | `AsyncStorage` local | ❌ Never | N/A (local) | ✅ Yes (fast, sync) |
-| AI generation | `pollinations.ai` live API | ✅ Every time | ❌ No | Only on demand |
+## Success Definition
+- 10,000 הורדות ב-3 חודשים ראשונים
+- Session length ממוצעת מעל 5 דקות
+- יותר מ-60% מהמשתמשים מגיעים לשלב B (21 שחקנים)
 
 ---
 
-## Current App Behavior (Canonical)
+# 2. Product Understanding
+
+## Product Vision
+להפוך לימוד על כדורגל לחוויה אינטראקטיבית שמתחרה על זמן המסך של הילד — לא באמצעות צריכה פסיבית אלא דרך גדילה, פתיחת תכנים, ומשחקיות.
+
+## Problem Statement
+ילדים אוהבים כדורגל אבל לא יודעים הרבה על השחקנים מעבר לשם. אין אפליקציה בעברית שמשלבת ידע, משחק ועיצוב שמתאים לגיל.
+
+## Target Audience
+- ילדים גילאי 6-12, דוברי עברית, מתעניינים בכדורגל אירופאי וישראלי
+- הורים: מורידים, ילד משתמש; מצפים לתוכן בטוח וחינוכי
+- עתידי: בתי ספר, מועדוני ספורט, קייטנות
+
+## User Personas
+
+### ילד בית ספר — גיל 9
+- Role: משתמש קצה ראשי
+- Goals: לפתוח את כל שחקני ברצלונה, לנצח בליגה
+- Pain Points: שאלות קשות מדי, תמונות שלא נטענות
+- Technical Knowledge: נמוך — UX אינטואיטיבי לחלוטין
+- Usage Frequency: יומי, 5-15 דקות
+
+### הורה — גיל 35
+- Role: מוריד ומאשר זמן מסך
+- Goals: תוכן בטוח, חינוכי, ללא קניות מובנות מפתיעות
+- Pain Points: פרסומות אגרסיביות, דרישת מידע אישי
+- Usage Frequency: חד-פעמי (הורדה + הסתכלות ראשונית)
+
+## User Flows
 
 ### Onboarding
-- Route: `/onboarding`
-- Mandatory for new/invalid state.
-- Team list is generated dynamically from `PLAYERS` teams (min 2 players per team).
-- User must select a team to continue.
+1. פתיחת אפליקציה — OnboardingGate בודק AsyncStorage
+2. אם אין state תקין (גרסה שונה / לא נבחרה קבוצה) — מנווט ל-/onboarding
+3. בחירת קבוצה מרשימה דינמית — שמירה ב-AsyncStorage — מנווט ל-(tabs)
 
-### Navigation / Tabs
-- `/(tabs)/index` = בית
-- `/(tabs)/management` = ניהול קבוצה (Unlocked at 21 players)
-- `/(tabs)/squad` = הסגל שלי
-- `/(tabs)/gallery` = שחקנים
-- `/(tabs)/generate` = AI (prompt-based generation via Pollinations)
+### לימוד שחקן
+1. בית — כרטיס שחקן — wallpaper/[id]
+2. טאב שאלות — שאלה אקראית מתוך 4 לשחקן
+3. תשובה נכונה — correctAnswers++ — פידבק — שאלה הבאה
+4. תשובה שגויה — סגירה 250ms — חזרה לרשימה, לא נשמרת
+5. 4 תשובות נכונות — unlocked: true — שחקן פתוח בסגל
 
-### Player Quiz Rules
-- Wrong answer closes question immediately (250ms delay) and is NOT counted.
-- Correct answer increments `correctAnswers` in `playerProgress`.
-- Player unlock at 4 correct answers (`unlocked: true` in state).
-- Each question index tracked in `answeredIndices` to prevent re-answering.
-- Answers are reshuffled on every question view.
+### הסגל שלי
+1. /squad מציג כל שחקני הקבוצה האהובה
+2. נעול = overlay + מנעול + X/4; פתוח = border ירוק + V
+3. Progress bar = סה"כ פתוחים מכל הקבוצות
+4. לחיצה על שחקן — wallpaper/[id]
 
-### Squad Rules
-- Shows ALL players from the favorite team with locked/unlocked visual state.
-- Unlocked = green glow border + ✅ badge; Locked = dark overlay + 🔒 + X/4 progress.
-- DEV_FLAGS.UNLOCK_21_PLAYERS_FOR_TESTS overrides unlock status (routes all checks through `getUnlockedPlayers()`).
-- Stage B progress bar = total unlocked across ALL teams (not just favorite).
-- Two header buttons: 🔄 קבוצה (navigate to onboarding, no data loss) | 🗑 איפוס (wipe all data + onboarding).
+### שלב B — ניהול ליגה
+1. נפתח ב-21 שחקנים פתוחים
+2. בחירת הרכב 4-3-3 עם אילוצי עמדה
+3. לחיצת "שחק מחזור" — סימולציה + עדכון טבלה + מטבעות
+4. בונוס: שאלת ידע לכפל מטבעות
+5. אליפות (מקום 1): בונוס 200 מטבעות
 
-### Management (League Season v2)
-- Route: `/(tabs)/management`
-- 4-3-3 slot lineup with role constraints:
-  - `gk` → Goalkeeper only
-  - back line slots → Defender
-  - mid/wing/st slots → Midfielder or Forward
-- No duplicate player assignment across slots.
-- `קבע הרכב אוטומטי` auto-fills lineup by slot rules without duplicates.
-- Double-leg round-robin league season (10 teams × 9 rounds).
-- Play progresses round by round (`שחק מחזור`).
-- Every round simulates all fixtures, updates league table and user stats.
-- Match result UI: visual modal (score + teams + coins earned).
-- **Post-Match Bonus:** Chance to double match coins by answering a random football quiz question.
-- **Championship:** If user finishes 1st place, show trophy popup + championship coins bonus (200).
-- Season can be reset via `עונה חדשה`.
+### AI Generation
+1. /generate — prompt עברית/אנגלית + סגנון
+2. fetch ל-Pollinations.ai — תמונה חדשה
+3. הורדה / שיתוף / טפט — InterstitialAdModal — פעולה
 
-### Monetization & Ads
-- **Strategy:** No persistent banners. Interstitial ads (Modal) on value actions only.
-- **Trigger:** Download, Set Wallpaper, Share image.
-- **Component:** `components/InterstitialAdModal.tsx` — countdown + ad simulation.
-
-### AI Image Generation
-- Route: `/(tabs)/generate`
-- Hebrew/English prompt input.
-- Multiple styles: Realistic, Anime, Cartoon, Neon, Oil Painting.
-- Powered by Pollinations AI (FLUX model, 1024×1792px).
-- Actions: Download to gallery, Share, Set as wallpaper — all trigger interstitial ad.
-
-### Temporary QA Override (Development)
-- File: `constants/featureFlags.ts`
-- `UNLOCK_21_PLAYERS_FOR_TESTS: true` → `getUnlockedPlayers()` returns 40 role-priority players in `__DEV__`.
-- `QA_UNLOCKED_PLAYERS_COUNT: 40` → controls exact count.
-- Ignored in production (`__DEV__ === false`).
+## Critical Business Logic
+- שחקן נפתח רק אחרי 4 תשובות נכונות בלבד — לא 4 ניסיונות
+- answeredIndices מונע ספירה כפולה של אותה שאלה
+- תשובה שגויה סוגרת ב-250ms — לא נשמרת
+- שלב B נפתח ב-21 שחקנים בדיוק (STAGE_B_GOAL = 21)
+- הרכב חייב 11 שחקנים עם אילוצי עמדה לפני משחק מחזור
+- לא ניתן לשבץ אותו שחקן בשני מקומות
+- ניצחון = 30 מטבעות, תיקו = 12, הפסד = 5
+- אליפות (מקום 1 בסוף עונה) = בונוס 200 מטבעות נוסף
 
 ---
 
-## Data Model (Game State)
-Defined in `hooks/useGameState.ts`. Stored in `AsyncStorage` as JSON.
+# 3. Technical Architecture
 
-`GameState`:
-- `appDataVersion: number` — bump to force migration/re-onboarding
-- `onboardingDone: boolean`
-- `favoriteTeam: string | null`
-- `playerProgress: Record<playerId, PlayerProgress>`
-  - `correctAnswers: number`
-  - `unlocked: boolean` (true when correctAnswers >= 4)
-  - `answeredIndices: number[]` (prevents double-counting same question)
-- `lineup: Record<LineupSlot, string | null>` — 11 slots (gk, cb1, cb2, lb, rb, cm1, cm2, cm3, lw, rw, st)
-- `seasonRounds: Round[]`
-- `currentRound: number`
-- `leagueTable: LeagueRow[]`
-- `coins: number`
-- `matchStats: { wins, draws, losses }`
+## System Architecture
 
-`Round`: `{ round: number, fixtures: Fixture[] }`
-`Fixture`: `{ home, away, played, homeGoals, awayGoals }`
-`LeagueRow`: `{ team, played, wins, draws, losses, gf, ga, gd, pts }`
+### Frontend (הכל)
+- React Native 0.81.5 + Expo SDK 54 (Managed Workflow)
+- Expo Router v6 — file-based routing (tabs + stack)
+- TypeScript strict mode
+- React 19.1.0
 
-Storage key: `@football_stars_game`
+### Backend
+- אין שרת. האפליקציה היא client-only לחלוטין.
+- Supabase מוגדר ב-lib/supabase.ts אך אינו בשימוש כרגע — מוכן לעתיד.
+- כל ה-state שמור מקומית ב-AsyncStorage.
 
-Versioning:
-- Current `appDataVersion`: `5`
-- On mismatch → reset to DEFAULT_STATE → force onboarding.
+### External Services (בשימוש פעיל)
+- r2.thesportsdb.com — CDN תמונות שחקנים (PNG cutouts, ללא API key)
+- crests.football-data.org — SVG לוגואים קבוצות (ללא API key)
+- pollinations.ai — AI image generation (FLUX, ללא API key)
+- Google AdMob — פרסומות (react-native-google-mobile-ads)
+
+### External Services (מוגדר, לא פעיל)
+- Supabase — מוכן לשימוש עתידי (auth, leaderboards, cloud sync)
+
+### Caching
+- expo-image — disk cache אוטומטי לתמונות ולוגואים
+- AsyncStorage — persistence מקומי ללא TTL
+- אין server-side cache
+
+## Architecture Principles
+- Client-first: כל הלוגיקה רצה על המכשיר
+- Bundle-first: נתוני שחקנים בתוך ה-bundle בלבד — לא מרשת
+- Zero API calls לנתוני משחק — רק תמונות + AI generation
+- expo-image disk cache כ-CDN cache layer
+- AsyncStorage כ-single source of truth למצב המשתמש
+- Feature flags לכל override מסוכן (DEV_FLAGS)
+
+## Infrastructure Diagram
+
+```
+[User Device]
+    |
+    |-- AsyncStorage (local) <-> useGameState hook
+    |
+    |-- expo-image cache (disk) <-> r2.thesportsdb.com (first load only)
+    |                            <-> crests.football-data.org (first load only)
+    |
+    |-- fetch() <-> pollinations.ai (on demand, /generate screen only)
+    |
+    |-- AdMob SDK <-> Google AdMob servers
+```
+
+## Deployment Topology
+
+| סביבה | תיאור | הפצה |
+|-------|-------|------|
+| Development | Expo Go / local dev client | מפתח בלבד |
+| Preview | APK פנימי דרך EAS | QA |
+| Production | AAB — Google Play | משתמשי קצה |
+| iOS (עתידי) | IPA — App Store | לא פעיל עדיין |
+
+## Cloud Providers
+- EAS (Expo Application Services) — build + submit
+- Google Play — distribution
+- Google AdMob — monetization
+
+## CDN
+- r2.thesportsdb.com — Cloudflare R2, תמונות שחקנים
+- crests.football-data.org — לוגואים
+- Cache policy: expo-image disk cache, ללא TTL מוגדר
 
 ---
 
-## Critical UX Constraints
-1. Wrong answers must never be counted as correct.
-2. Onboarding must not be skipped on fresh/invalid state.
-3. Stage B gate enforced at 21 unlocked players total.
-4. Stage B must enforce slot-role constraints and no duplicate assignment.
-5. Season progression must be sequential by rounds.
-6. All user-facing UI text must remain Hebrew-first.
-7. Never make API calls for player data or quiz — everything is in the bundle.
+# 4. Repository Rules
+
+## Repository Structure
+
+```
+/app
+  /(tabs)
+    index.tsx          -- בית
+    squad.tsx          -- הסגל שלי
+    gallery.tsx        -- שחקנים
+    management.tsx     -- ניהול קבוצה (שלב B)
+    generate.tsx       -- AI generation
+    _layout.tsx        -- Tab bar config
+  /wallpaper
+    [id].tsx           -- כרטיס שחקן + quiz + טפט
+  _layout.tsx          -- Root layout + OnboardingGate
+  onboarding.tsx       -- בחירת קבוצה
+/components            -- Shared UI components
+/constants             -- Static data + theme + flags
+/hooks                 -- React hooks
+/lib                   -- Third-party clients (supabase)
+/services              -- Platform services (imageService)
+/assets                -- Images, icons, splash
+.ai                    -- THIS FILE
+```
+
+## Branching Strategy
+- main — production-ready at all times
+- feature/* — פיצ'רים חדשים
+- fix/* — תיקוני באגים
+- Agents עובדים ישירות על main (צוות קטן)
+
+## Commit Convention
+```
+feat: תכונה חדשה
+fix: תיקון באג
+refactor: שיפור קוד ללא שינוי behavior
+docs: תיעוד בלבד (כולל .ai)
+data: הוספת/עדכון שחקנים ב-players.ts
+chore: תחזוקה (deps, config)
+```
+
+## Pull Request Rules
+- npx tsc --noEmit חייב לעבור לפני כל commit
+- עדכון .ai חובה עבור כל שינוי functional
 
 ---
 
-## Agent Change Protocol (Mandatory)
-For every functional change, agents MUST:
-1. Update this `.ai` file in the same change set.
-2. Update behavior/data sections if relevant.
-3. Keep exact thresholds/routes/version values accurate.
-4. If `.ai` not updated for behavior/model changes, task is incomplete.
+# 5. Technology Stack
+
+## Frontend
+- Framework: React Native 0.81.5 + Expo SDK 54
+- Router: Expo Router v6 (file-based)
+- State: useState + useCallback + useMemo (אין Redux/Zustand/Context)
+- Persistence: AsyncStorage (react-native-async-storage 2.2.0)
+- Styling: StyleSheet.create + expo-linear-gradient + expo-blur
+- Images: expo-image 3.0.11 (disk cache, contentFit, transition)
+- Animations: react-native-reanimated 4.1.1 + react-native-worklets 0.8.3
+- Gestures: react-native-gesture-handler 2.28.0
+- Build: Metro bundler
+- Type checking: TypeScript 5.3
+
+## Backend
+- אין — client-only
+
+## Database
+- Primary: AsyncStorage (local, JSON blob)
+- External (לא פעיל): Supabase Postgres — מוכן לחיבור עתידי
+
+## Infrastructure
+- Build: EAS (development / preview APK / production AAB)
+- Distribution: Google Play
+- אין Terraform, אין Kubernetes, אין Docker
+
+## AI Stack
+- Provider: Pollinations.ai
+- Model: FLUX (image generation, 1024x1792px)
+- Endpoint: https://pollinations.ai/p/{prompt}?width=1024&height=1792&seed={n}&model=flux
+- אין embeddings, אין vector DB, אין RAG, אין tool calling
+
+## Monitoring Stack
+- כרגע אין כלום — ראה סיכון 1
 
 ---
 
-## Quick Validation Checklist for Agents
-- `npx tsc --noEmit` passes.
-- Flow: onboarding → quiz unlock → squad → stage B.
-- Stage B: lineup completes with role constraints, round plays, table updates, reset works.
-- No new `fetch()` / `axios` / API calls added for player data or images (bundle-only).
-- `.ai` synchronized with actual code.
+# 6. APIs
+
+## External APIs
+
+| Provider | מטרה | Auth | Cache | הערות |
+|----------|------|------|-------|-------|
+| r2.thesportsdb.com | תמונות שחקנים PNG | ללא | expo-image disk | URLs hardcoded ב-players.ts |
+| crests.football-data.org | לוגואי קבוצות SVG | ללא | expo-image disk | URLs hardcoded ב-onboarding + management |
+| pollinations.ai | AI image generation | ללא | ללא | live request לכל יצירה |
+| Google AdMob | פרסומות | SDK + App ID | N/A | TEST IDs כרגע — לשנות לפרודקשן |
+| Supabase | עתידי | anon key | N/A | מוגדר, לא בשימוש |
+
+## AdMob — אזהרה קריטית
+כרגע App IDs הם Test IDs של גוגל:
+- Android: ca-app-pub-3940256099942544~3347511713
+- iOS: ca-app-pub-3940256099942544~1458002511
+
+לפרודקשן חייבים להחליף ל-IDs אמיתיים מ-AdMob Console לפני כל build לחנות.
+
+## API Security Rules
+- אין API keys בקוד — TheSportsDB ו-Pollinations הם public/free
+- Supabase anon key דרך environment variables בלבד (EXPO_PUBLIC_*)
+- לא לכתוב secrets בקוד
+
+---
+
+# 7. Secrets & Environment Variables
+
+## Environment Variables
+```
+EXPO_PUBLIC_SUPABASE_URL=https://[PROJECT].supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=[ANON_KEY]
+```
+
+## Forbidden Actions
+AI agents חייבים לעולם לא:
+- להדפיס או לכתוב secrets לתוך קוד
+- להחליף Test AdMob IDs בלי אישור מפורש
+- לבצע commit של קובץ .env
+- לחשוף Supabase service_role key (anon key בלבד)
+
+---
+
+# 8. Security
+
+## Security Model
+אפליקציה anonymous — אין auth, אין user accounts, אין PII. כל הנתונים מקומיים בלבד.
+
+## Authentication
+- אין auth כרגע
+- Supabase מוגדר עם persistSession: true לשימוש עתידי
+
+## Data Classification
+- Public: כל נתוני השחקנים (bundled)
+- Internal: game state (AsyncStorage, מקומי בלבד)
+- לא נאסף שום מידע אישי
+
+## Compliance
+- COPPA: רלוונטי בעתיד אם מוסיפים auth לילדים מתחת לגיל 13
+- GDPR: אין PII, אין analytics כרגע — נקי
+- Google Play Families Policy: חייבים לוודא AdMob מוגדר ל-child-directed לפני launch
+
+## Security Requirements
+- לא לאחסן מידע אישי
+- AI generation: Pollinations.ai לא מסנן תוכן — לסנן prompts בצד הלקוח בעתיד
+- AsyncStorage: לא מוצפן — לא לשמור בו מידע רגיש
+
+---
+
+# 9. Networking
+
+## Domains
+- תמונות: r2.thesportsdb.com
+- לוגואים: crests.football-data.org
+- AI: pollinations.ai
+- Supabase (עתידי): [PROJECT].supabase.co
+
+## Android Permissions
+```
+android.permission.INTERNET
+android.permission.READ_MEDIA_IMAGES
+android.permission.READ_EXTERNAL_STORAGE
+android.permission.WRITE_EXTERNAL_STORAGE
+android.permission.CAMERA  <- לבדוק אם נחוץ
+```
+
+---
+
+# 10. Database Architecture
+
+## Local Storage — AsyncStorage
+
+Key: @football_stars_game
+Format: JSON blob יחיד
+
+### GameState Schema
+```typescript
+{
+  appDataVersion: number,        // נוכחי: 5
+  onboardingDone: boolean,
+  favoriteTeam: string | null,
+  playerProgress: {
+    [playerId: string]: {
+      correctAnswers: number,    // 0-4
+      unlocked: boolean,         // true כאשר correctAnswers >= 4
+      answeredIndices: number[]  // מונע ספירה כפולה של אותה שאלה
+    }
+  },
+  lineup: {
+    gk:  string | null,  // Goalkeeper only
+    cb1: string | null,  // Defender only
+    cb2: string | null,  // Defender only
+    lb:  string | null,  // Defender only
+    rb:  string | null,  // Defender only
+    cm1: string | null,  // Midfielder | Forward
+    cm2: string | null,  // Midfielder | Forward
+    cm3: string | null,  // Midfielder | Forward
+    lw:  string | null,  // Midfielder | Forward
+    rw:  string | null,  // Midfielder | Forward
+    st:  string | null   // Midfielder | Forward
+  },
+  seasonRounds: Round[],
+  currentRound: number,
+  leagueTable: LeagueRow[],
+  coins: number,
+  matchStats: { wins: number, draws: number, losses: number }
+}
+```
+
+### Round Schema
+```typescript
+{ round: number, fixtures: Fixture[] }
+```
+
+### Fixture Schema
+```typescript
+{ home: string, away: string, played: boolean, homeGoals: number|null, awayGoals: number|null }
+```
+
+### LeagueRow Schema
+```typescript
+{ team: string, played: number, wins: number, draws: number, losses: number, gf: number, ga: number, gd: number, pts: number }
+```
+
+## Versioning Policy
+- appDataVersion חייב להתעדכן בכל שינוי שובר תאימות ל-state schema
+- ערך נוכחי: 5
+- מיסמץ — DEFAULT_STATE + חזרה ל-onboarding
+- חייב להיות זהה ב-hooks/useGameState.ts וב-app/_layout.tsx
+
+---
+
+# 11. Observability
+
+## כרגע: אין
+אין logging מרוכז, אין metrics, אין crash reporting, אין analytics.
+
+## סיכון פעיל
+זה הסיכון הגדול ביותר לפרודקשן — ראה סעיף 20.
+
+## המלצה לעתיד
+- Sentry (@sentry/react-native) — crash reporting
+- Amplitude / Mixpanel — user flows + retention
+- Correlation ID לכל session
+
+---
+
+# 12. CI/CD
+
+## Build System
+EAS Build (eas build)
+- development: dev client
+- preview: APK פנימי
+- production: AAB לGoogle Play
+
+## אין CI אוטומטי כרגע
+- אין GitHub Actions
+- Validation ידני: npx tsc --noEmit לפני כל commit
+
+## Deployment Commands
+```bash
+# Preview (APK לבדיקות)
+eas build --platform android --profile preview
+
+# Production (AAB לGoogle Play)
+eas build --platform android --profile production
+eas submit --platform android
+```
+
+## Mandatory Pre-Deploy Checklist
+1. npx tsc --noEmit — אפס שגיאות
+2. בדיקת onboarding flow ידנית
+3. בדיקת quiz + unlock ידנית
+4. בדיקת stage B ידנית
+5. החלפת AdMob TEST IDs ל-production IDs
+6. עדכון version ב-package.json + app.json
+7. .ai מסונכרן עם הקוד
+
+---
+
+# 13. Testing Strategy
+
+## כרגע: אין טסטים אוטומטיים
+
+## QA ידני — DEV_FLAGS
+```typescript
+// constants/featureFlags.ts
+export const DEV_FLAGS = {
+  UNLOCK_21_PLAYERS_FOR_TESTS: true,  // פותח 40 שחקנים ב-__DEV__
+  QA_UNLOCKED_PLAYERS_COUNT: 40,
+};
+```
+- בפרודקשן: __DEV__ === false — flags מתעלמים לחלוטין
+- כל בדיקות unlock חייבות לעבור דרך getUnlockedPlayers() בלבד
+
+## בדיקות ידניות חובה לפני Deploy
+- Onboarding: בחירת קבוצה — שמירה — reload — לא חוזר ל-onboarding
+- Quiz: תשובה שגויה לא נספרת; 4 נכונות — שחקן נפתח
+- Squad: כל שחקני הקבוצה מוצגים (נעולים + פתוחים)
+- Progress bar = סה"כ פתוחים מכל הקבוצות (לא רק הקבוצה הנוכחית)
+- Stage B: נפתח בדיוק ב-21; הרכב עם אילוצי עמדה; ניצחון מוסיף מטבעות
+- Reset: מוחק הכל — חזרה ל-onboarding
+
+## המלצה לעתיד
+- Jest + React Native Testing Library לunit tests על useGameState
+- Detox לE2E tests
+
+---
+
+# 14. Data Sources
+
+## איפה מגיע כל מידע
+
+### נתוני שחקנים (bio, שאלות, stats)
+- מקור: constants/players.ts — bundled בתוך האפליקציה
+- אין API, אין network request, אין sync
+- עריכת שחקן = עריכת קובץ + eas build חדש
+- 112+ שחקנים, 4 שאלות לשחקן, 4 תשובות לשאלה
+- שדות לכל שחקן: id, name, displayName, team, league, position, jerseyNumber, birthDate, birthPlace, height, weight, nationality, formerTeams, funFact, teamColor, teamColorSecondary, isFeatured, isPopular, directImageUrl, quizQuestions[]
+
+### תמונות שחקנים
+- מקור: directImageUrl — URL hardcoded לכל שחקן ב-players.ts
+- CDN: r2.thesportsdb.com/images/media/player/cutout/... (TheSportsDB, ללא API key)
+- נטעני בפעם הראשונה — expo-image שומר ב-disk cache — לא נטעני שוב
+- שחקנים ישראלים ללא directImageUrl — gradient fallback עם אות ראשונה
+- Hook: hooks/usePlayerImages.ts — pure useMemo, אפס network calls, אפס useEffect
+
+### לוגואי קבוצות
+- מקור: BADGE_MAP hardcoded ב-onboarding.tsx ו-management.tsx
+- CDN: crests.football-data.org/{id}.svg (ללא API key)
+- נטעני פעם אחת — expo-image cache
+- קבוצות ישראליות: gradient + אות ראשונה בעברית (אין לוגו)
+
+### מצב המשחק
+- מקור: AsyncStorage מקומי בלבד
+- נטעני פעם אחת ב-mount של useGameState
+- נשמר על כל mutation מיידית
+- אין שרת, אין sync, מחיקת אפליקציה = אובדן כל הנתונים
+
+### AI יצירת תמונות
+- מקור: Pollinations.ai — live API request
+- כל לחיצה = request חדש
+- אין cache, אין שמירה אוטומטית
+
+## טבלת סיכום
+
+| מידע | מקור | Network? | Cache? | בכל פתיחה? |
+|------|------|----------|--------|------------|
+| נתוני שחקן + שאלות | bundle | לא אף פעם | N/A | לא |
+| תמונות שחקנים | TheSportsDB CDN | כן, פעם ראשונה | כן, expo-image | לא |
+| לוגואי קבוצות | football-data.org | כן, פעם ראשונה | כן, expo-image | לא |
+| מצב משחק | AsyncStorage | לא אף פעם | N/A (local) | כן, מהיר |
+| AI תמונה | pollinations.ai | כן, כל פעם | לא | לפי דרישה |
+
+---
+
+# 15. AI Agent Instructions
+
+## AI Agent Mission
+כל Agent AI חייב:
+- לקרוא קובץ זה במלואו לפני כתיבת קוד
+- לזהות אילו קבצים ייפגעו מהשינוי
+- לוודא שלא מוסיפים network calls לנתוני שחקנים
+- לבצע npx tsc --noEmit אחרי כל שינוי
+- לעדכן .ai באותו commit עם כל שינוי functional
+
+## AI Agent Forbidden Actions
+AI agents חייבים לעולם לא:
+- להוסיף fetch() לנתוני שחקנים — הכל bundled
+- להמציא API שאינו קיים
+- לשנות appDataVersion ללא סיבה — גורם ל-reset של כל המשתמשים
+- להסיר כפתור "איפוס" מה-squad screen
+- לשנות סף Stage B (21) ללא אישור מפורש
+- להוסיף dependencies חדשות ללא בדיקת תאימות Expo SDK 54
+- לכתוב secrets בקוד
+- להחליף AdMob IDs בלי הנחיה מפורשת
+
+## AI Agent Mandatory Actions
+AI agents חייבים תמיד:
+- לוודא TypeScript נקי (npx tsc --noEmit)
+- לעדכן .ai באותו commit עם כל שינוי functional
+- להשתמש ב-getUnlockedPlayers() לכל בדיקת פתיחת שחקנים (מכבד DEV_FLAGS)
+- לשמור כל text עברי בממשק המשתמש
+- לשמור על שני כפתורים בסגל: קבוצה (ללא איפוס) ואיפוס (עם Alert)
+
+## AI Code Standards
+- TypeScript explicit typing — אין any implicit
+- אין magic values — קבועים מוגדרים בראש הקובץ
+- useMemo/useCallback לכל פונקציה יקרה
+- Pure functions מועדפות
+- Feature flags לכל שינוי רגיש (DEV_FLAGS)
+- RTL-first: כל text מיושר לימין, עברית תמיד
+
+---
+
+# 16. Third-Party Integrations
+
+| Vendor | מטרה | Auth | Failure Handling | Data Shared |
+|--------|------|------|------------------|-------------|
+| TheSportsDB CDN | תמונות שחקנים | ללא | gradient fallback | ללא |
+| football-data.org | לוגואי קבוצות SVG | ללא | gradient fallback | ללא |
+| Pollinations.ai | AI image gen | ללא | הצגת שגיאה | prompt text בלבד |
+| Google AdMob | פרסומות | SDK | אין ad = אין חסימה | device ad ID |
+| Supabase | עתידי | anon key | N/A | N/A |
+| EAS | build + submit | Expo account | N/A | קוד מקור |
+
+---
+
+# 17. Product Management
+
+## Roadmap
+
+### שלב נוכחי — MVP
+- [x] Onboarding + בחירת קבוצה
+- [x] כרטיסי שחקנים + שאלות ידע
+- [x] פתיחת שחקנים (4 תשובות נכונות)
+- [x] הסגל שלי עם locked/unlocked visual
+- [x] שלב B — ניהול ליגה 4-3-3
+- [x] AI image generation (Pollinations)
+- [x] הורדת טפטים + שיתוף
+
+### שלב הבא — Growth
+- [ ] החלפת AdMob TEST IDs ל-production IDs
+- [ ] הוספת Sentry לcrash reporting
+- [ ] Leaderboard גלובלי (Supabase)
+- [ ] Push notifications (תזכורת יומית)
+- [ ] iOS build + App Store
+- [ ] הוספת תמונות לשחקנים ישראלים
+- [ ] אנימציות unlock
+
+### חוב טכני
+- [ ] טסטים אוטומטיים (Jest + Detox)
+- [ ] Analytics (Amplitude / Mixpanel)
+- [ ] בדיקת Google Play Families Policy לAdMob
+- [ ] הסרת android.permission.CAMERA אם לא בשימוש
+
+## Feature Lifecycle
+Discovery — Design — Code — npx tsc — עדכון .ai — Commit — EAS Preview — QA ידני — EAS Production
+
+---
+
+# 18. Operational Runbooks
+
+## Production Bug Runbook
+1. Detect: דיווח משתמש / Play Console crash
+2. Triage: האם קריטי? (crash on open, data loss, תוכן לא הולם)
+3. Fix: fix/ branch — npx tsc — EAS preview — בדיקה
+4. Deploy: EAS production — Google Play staged rollout (20%/50%/100%)
+
+## Rollback
+- אין server rollback — האפליקציה היא bundle
+- Rollback = פרסום גרסה קודמת דרך Google Play Console
+- appDataVersion bump יכול לאפס state פגוע אם הבעיה ב-schema
+
+## Emergency: state corruption
+- הוראה למשתמש: לחיצה על "איפוס" בסגל שלי
+- או: מחיקת data האפליקציה מהגדרות המכשיר
+
+---
+
+# 19. Decision Log
+
+## ADR-001: Bundle-only player data
+- Status: Confirmed
+- Decision: הכל hardcoded ב-constants/players.ts
+- Consequences: אין network failures על נתונים; עדכון שחקנים = build חדש
+- Alternatives rejected: TheSportsDB API — rate limits, API key, תלות רשת
+
+## ADR-002: AsyncStorage בלי שרת
+- Status: Confirmed
+- Decision: MVP עם local-only state; Supabase מוכן לPhase 2
+- Consequences: אין leaderboard; data loss on uninstall; אין multi-device
+
+## ADR-003: expo-image לכל תמונות
+- Status: Confirmed
+- Decision: expo-image עם disk cache אוטומטי
+- Consequences: תמונות נטענות פעם אחת, reload מהיר
+- Alternatives rejected: React Native Image (אין disk cache), fast-image (תאימות Expo)
+
+## ADR-004: appDataVersion = 5
+- Status: Confirmed
+- Decision: bump ל-5 לאפס state של כל משתמשי QA עם schema ישן
+- Consequences: כל מי שהיה עם גרסה קודמת חוזר ל-onboarding
+
+---
+
+# 20. Risks
+
+## סיכון 1: אין Observability (קריטי)
+אין crash reporting. אם יש crash בפרודקשן לא יודעים עד שמשתמש מדווח.
+Mitigation: להוסיף Sentry לפני launch ראשון.
+
+## סיכון 2: AdMob Test IDs בפרודקשן (גבוה)
+Test IDs = אין הכנסה + Google עלול לחסום חשבון.
+Mitigation: Checklist חובה לפני כל production build.
+
+## סיכון 3: TheSportsDB URL rot (בינוני)
+URLs hardcoded. אם TheSportsDB משנה CDN — תמונות שבורות.
+Mitigation: gradient fallback קיים; לעדכן URLs ב-bugfix.
+
+## סיכון 4: Pollinations.ai availability (נמוך)
+שירות חינמי ללא SLA. אם יורד — AI generation לא עובד.
+Mitigation: הצגת error message ידידותי; פיצ'ר לא קריטי.
+
+## סיכון 5: Google Play Families Policy + COPPA (גבוה לעתיד)
+אפליקציה לילדים עם AdMob — חייבים child-directed configuration.
+Mitigation: לוודא tagForChildDirectedTreatment לפני launch.
+
+---
+
+# 21. Required AI Workflow
+
+Before generating ANY code, the AI agent MUST:
+1. לקרוא קובץ .ai זה במלואו
+2. לזהות אילו קבצים ייפגעו מהשינוי
+3. לזהות תלויות (imports, hooks, constants)
+4. לבדוק האם schema של GameState משתנה — אם כן, לבמפ appDataVersion
+5. לוודא שלא מוסיפים network calls לנתוני שחקנים
+6. לוודא RTL + עברית בכל UI חדש
+7. לבצע npx tsc --noEmit אחרי כל שינוי
+8. לעדכן .ai באותו commit
+
+If missing information exists:
+- STOP
+- לרשום מה חסר
+- לא להמציא APIs, schemas, או routes שאינם קיימים
+
+---
+
+# 22. Output Format Rules For AI Agents
+
+Every implementation response MUST include:
+
+## Summary
+- מה השתנה
+- למה
+
+## Impact Analysis
+- קבצים שנפגעו
+- סיכונים
+- תלויות
+
+## appDataVersion Check
+- האם schema של GameState השתנה? אם כן — חובה לבמפ
+
+## TypeScript Check
+- npx tsc --noEmit — תוצאה
+
+## .ai Update
+- אילו סעיפים עודכנו בקובץ זה
+
+---
+
+# 23. Non-Functional Requirements
+
+## Performance
+- פתיחת אפליקציה: פחות מ-2 שניות לSplash hide
+- טעינת רשימת שחקנים: instant (bundled data)
+- טעינת תמונה ראשונה: פחות מ-1 שנייה (CDN + expo-image)
+- טעינת תמונה חוזרת: instant (disk cache)
+
+## Reliability
+- שגיאת רשת בתמונות: fallback gradient — לא crash
+- שגיאת Pollinations: error message — לא crash
+- state corruption: resetGameState() — DEFAULT_STATE — לא crash
+
+## Accessibility
+- גופן מערכת (System font) — תמיכה בטקסט גדול
+- RTL: כל layouts חייבים לכבד RTL
+
+## Localization
+- עברית בלבד כרגע
+- RTL-first: כל ממשק מיושר לימין
+
+---
+
+# 24. Final Mandatory Rules
+
+AI Agents MUST treat this file as authoritative, binding, system-level instruction, and architectural contract.
+
+AI Agents MUST prioritize:
+1. יציבות — לא לשבור flow קיים
+2. אבטחה — לא לחשוף data, לא לכתוב secrets
+3. תאימות TypeScript — אפס errors
+4. תיעוד — .ai תמיד מסונכרן
+5. ביצועים — לא להוסיף network calls מיותרים
+6. חוויית משתמש — עברית, RTL, ילדים גיל 6-12
+
+If any request conflicts with this file: The .ai specification overrides the request.
+
+---
+
+# 25. Project-Specific Runtime Context
+
+## Active Environments
+- Development: Expo Go / expo start
+- Preview: APK פנימי דרך EAS
+- Production: Google Play (com.barhumai.footballstars)
+
+## Active Services
+
+| Service | Provider | Status | Criticality |
+|---------|----------|--------|-------------|
+| TheSportsDB CDN | r2.thesportsdb.com | פעיל | גבוה — תמונות שחקנים |
+| football-data.org | crests.football-data.org | פעיל | נמוך — לוגואים בלבד |
+| Pollinations AI | pollinations.ai | פעיל | נמוך — AI gen בלבד |
+| Google AdMob | Google | פעיל (TEST IDs) | גבוה — הכנסה |
+| Supabase | supabase.co | מוגדר, לא פעיל | N/A |
+| EAS | expo.dev | פעיל | גבוה — builds |
+
+## AI Models In Use
+
+| Model | Provider | Use Case | Risk Level |
+|-------|----------|----------|------------|
+| FLUX | Pollinations.ai | יצירת תמונות AI | בינוני — תוכן לא מסונן |
+
+---
+
+# 26. Living Document Policy
+
+This file is a living specification. Every significant change to the system MUST update this file.
+
+Changes requiring update:
+- שינוי appDataVersion
+- שינוי סף Stage B
+- הוספת API חדש
+- הוספת טאב / route חדש
+- שינוי AdMob configuration
+- הפעלת Supabase
+- הוספת monitoring
+- שינוי הרשאות Android/iOS
+- שינוי DEV_FLAGS
+- הוספת שחקן שמשנה מבנה נתונים
+
+Outdated documentation is considered a production risk.
+
+---
+# END OF .ai
