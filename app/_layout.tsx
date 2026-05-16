@@ -32,8 +32,8 @@ export default function RootLayout() {
           name="wallpaper/[id]"
           options={{
             headerShown: false,
-            animation: 'fade',
-            presentation: 'fullScreenModal',
+            animation: 'slide_from_right',
+            gestureEnabled: true,
           }}
         />
       </Stack>

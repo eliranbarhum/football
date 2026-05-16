@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,9 @@ import {
   FlatList,
   RefreshControl,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,16 +24,26 @@ import {
 import WallpaperCard from '../../components/WallpaperCard';
 import AdBanner from '../../components/AdBanner';
 import { usePlayerImages } from '../../hooks/usePlayerImages';
+import { getTeamBadge } from '../../lib/sportsApi';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// קבוצות להציג בדף הבית
 const TEAM_GROUPS = [
-  { name: 'Real Madrid', emoji: '👑', color: '#FFD700', secondary: '#FFFFFF' },
-  { name: 'Barcelona', emoji: '🔵🔴', color: '#004D98', secondary: '#A50044' },
-  { name: 'Manchester City', emoji: '🩵', color: '#6CABDD', secondary: '#FFFFFF' },
-  { name: 'Liverpool', emoji: '🔴', color: '#C8102E', secondary: '#00B2A9' },
-  { name: 'Bayern Munich', emoji: '🍺', color: '#DC052D', secondary: '#0066B2' },
-  { name: 'Arsenal', emoji: '💣', color: '#EF0107', secondary: '#FFFFFF' },
+  { name: 'Real Madrid',       searchName: 'Real Madrid',        color: '#FFFFFF', secondary: '#FFD700' },
+  { name: 'Barcelona',         searchName: 'FC Barcelona',       color: '#004D98', secondary: '#A50044' },
+  { name: 'Man City',          searchName: 'Manchester City',    color: '#6CABDD', secondary: '#FFFFFF' },
+  { name: 'Liverpool',         searchName: 'Liverpool',          color: '#C8102E', secondary: '#00B2A9' },
+  { name: 'Arsenal',           searchName: 'Arsenal',            color: '#EF0107', secondary: '#FFFFFF' },
+  { name: 'Man United',        searchName: 'Manchester United',  color: '#DA020E', secondary: '#FFE500' },
+  { name: 'Bayern',            searchName: 'Bayern Munich',      color: '#DC052D', secondary: '#0066B2' },
+  { name: 'PSG',               searchName: 'Paris Saint-Germain',color: '#004170', secondary: '#DA291C' },
+  { name: 'Inter Miami',       searchName: 'Inter Miami',        color: '#FF007F', secondary: '#000000' },
+  // ===== ישראל =====
+  { name: 'מכבי ת״א',          searchName: 'Maccabi Tel Aviv',   color: '#FFD700', secondary: '#003580' },
+  { name: 'ביתר י-ם',          searchName: 'Beitar Jerusalem',   color: '#FFD700', secondary: '#000000' },
+  { name: 'מכבי חיפה',         searchName: 'Maccabi Haifa',      color: '#006600', secondary: '#FFFFFF' },
+  { name: 'הפועל ב״ש',         searchName: 'Hapoel Beer Sheva',  color: '#CC0000', secondary: '#FFFFFF' },
 ];
 
 function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) {
@@ -49,27 +61,54 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => vo
 
 function TeamCard({
   name,
-  emoji,
+  searchName,
   color,
   secondary,
   onPress,
 }: {
   name: string;
-  emoji: string;
+  searchName: string;
   color: string;
   secondary: string;
   onPress: () => void;
 }) {
-  const shortName = name.split(' ').map((w) => w[0]).join('');
+  const [badgeUrl, setBadgeUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getTeamBadge(searchName).then((url) => {
+      if (!cancelled) {
+        setBadgeUrl(url);
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [searchName]);
+
   return (
     <TouchableOpacity onPress={onPress} style={styles.teamCard} activeOpacity={0.8}>
       <LinearGradient
-        colors={[color, secondary]}
+        colors={[color + '33', secondary + '22']}
         style={styles.teamGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <Text style={styles.teamEmoji}>{emoji}</Text>
+        {loading ? (
+          <ActivityIndicator size="small" color={color} />
+        ) : badgeUrl ? (
+          <Image
+            source={{ uri: badgeUrl }}
+            style={styles.teamBadge}
+            contentFit="contain"
+            transition={300}
+          />
+        ) : (
+          // Fallback: ראשי תיבות
+          <Text style={[styles.teamInitial, { color }]}>
+            {name.slice(0, 2).toUpperCase()}
+          </Text>
+        )}
       </LinearGradient>
       <Text style={styles.teamName} numberOfLines={1}>{name}</Text>
     </TouchableOpacity>
@@ -92,10 +131,7 @@ export default function HomeScreen() {
   };
 
   const handleTeamPress = (teamName: string) => {
-    router.push({
-      pathname: '/(tabs)/gallery',
-      params: { team: teamName },
-    });
+    router.push({ pathname: '/(tabs)/gallery', params: { team: teamName } });
   };
 
   return (
@@ -119,12 +155,12 @@ export default function HomeScreen() {
             <Text style={styles.headerSubtitle}>ברוכים הבאים 👋</Text>
             <Text style={styles.headerTitle}>Football Stars ⚽</Text>
           </View>
-          <TouchableOpacity style={styles.settingsBtn}>
-            <Text style={styles.settingsEmoji}>⚙️</Text>
-          </TouchableOpacity>
+          <View style={styles.israelBadge}>
+            <Text style={styles.israelText}>🇮🇱</Text>
+          </View>
         </View>
 
-        {/* Featured Players - Horizontal Scroll */}
+        {/* Featured Players */}
         <SectionHeader
           title="⭐ כוכבי השבוע"
           onSeeAll={() => router.push('/(tabs)/gallery')}
@@ -148,6 +184,30 @@ export default function HomeScreen() {
           ItemSeparatorComponent={() => <View style={{ width: Spacing.sm }} />}
         />
 
+        {/* Israeli Section */}
+        <SectionHeader
+          title="🇮🇱 שחקנים ישראלים"
+          onSeeAll={() => router.push({ pathname: '/(tabs)/gallery', params: { league: 'Israeli Premier League' } })}
+        />
+        <FlatList
+          data={PLAYERS.filter(p => p.nationality === 'Israel')}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <WallpaperCard
+              player={item}
+              imageUrl={images[item.id]?.thumbUrl}
+              onPress={() => handlePlayerPress(item)}
+              size="large"
+            />
+          )}
+          snapToInterval={SCREEN_WIDTH * 0.75 + Spacing.sm}
+          decelerationRate="fast"
+          ItemSeparatorComponent={() => <View style={{ width: Spacing.sm }} />}
+        />
+
         {/* Teams Grid */}
         <SectionHeader title="🏟️ לפי קבוצה" />
         <FlatList
@@ -159,7 +219,7 @@ export default function HomeScreen() {
           renderItem={({ item }) => (
             <TeamCard
               name={item.name}
-              emoji={item.emoji}
+              searchName={item.searchName}
               color={item.color}
               secondary={item.secondary}
               onPress={() => handleTeamPress(item.name)}
@@ -168,7 +228,7 @@ export default function HomeScreen() {
           ItemSeparatorComponent={() => <View style={{ width: Spacing.sm }} />}
         />
 
-        {/* Popular Players Grid */}
+        {/* Popular Players */}
         <SectionHeader
           title="🔥 שחקנים פופולריים"
           onSeeAll={() => router.push('/(tabs)/gallery')}
@@ -185,7 +245,7 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        <View style={{ height: Spacing.xxl }} />
+        <View style={{ height: 80 }} />
       </ScrollView>
 
       <AdBanner />
@@ -194,16 +254,9 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.primary,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.lg,
-  },
+  safeArea: { flex: 1, backgroundColor: Colors.primary },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: Spacing.lg },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -212,76 +265,32 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.base,
     paddingBottom: Spacing.lg,
   },
-  headerSubtitle: {
-    color: Colors.textMuted,
-    fontSize: Fonts.sizes.sm,
-    marginBottom: 2,
-  },
-  headerTitle: {
-    color: Colors.text,
-    fontSize: Fonts.sizes.xxl,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  settingsBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  headerSubtitle: { color: Colors.textMuted, fontSize: Fonts.sizes.sm, marginBottom: 2 },
+  headerTitle: { color: Colors.text, fontSize: Fonts.sizes.xxl, fontWeight: '900', letterSpacing: -0.5 },
+  israelBadge: {
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: Colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: Colors.border,
   },
-  settingsEmoji: {
-    fontSize: 20,
-  },
+  israelText: { fontSize: 22 },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: Spacing.base, paddingTop: Spacing.lg, paddingBottom: Spacing.sm,
   },
-  sectionTitle: {
-    color: Colors.text,
-    fontSize: Fonts.sizes.lg,
-    fontWeight: '800',
-  },
-  seeAll: {
-    color: Colors.accent,
-    fontSize: Fonts.sizes.sm,
-    fontWeight: '600',
-  },
-  horizontalList: {
-    paddingHorizontal: Spacing.base,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: Spacing.base,
-    gap: Spacing.sm,
-  },
-  teamCard: {
-    alignItems: 'center',
-    width: 80,
-  },
+  sectionTitle: { color: Colors.text, fontSize: Fonts.sizes.lg, fontWeight: '800' },
+  seeAll: { color: Colors.accent, fontSize: Fonts.sizes.sm, fontWeight: '600' },
+  horizontalList: { paddingHorizontal: Spacing.base },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: Spacing.base, gap: Spacing.sm },
+  // Team card
+  teamCard: { alignItems: 'center', width: 80 },
   teamGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 64, height: 64, borderRadius: 32,
+    alignItems: 'center', justifyContent: 'center',
     marginBottom: Spacing.xs,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
-  teamEmoji: {
-    fontSize: 24,
-  },
-  teamName: {
-    color: Colors.textMuted,
-    fontSize: Fonts.sizes.xs,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
+  teamBadge: { width: 44, height: 44 },
+  teamInitial: { fontSize: 18, fontWeight: '900' },
+  teamName: { color: Colors.textMuted, fontSize: Fonts.sizes.xs, fontWeight: '600', textAlign: 'center' },
 });
