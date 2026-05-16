@@ -115,7 +115,7 @@ const STYLES = [
 ];
 
 export default function GenerateScreen() {
-  const { state, canGenerateAI, incrementAIUsage } = useGameState();
+  const { } = useGameState();
   const [prompt, setPrompt] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('photorealistic');
   const [loading, setLoading] = useState(false);
@@ -124,15 +124,8 @@ export default function GenerateScreen() {
   const [showAd, setShowAd] = useState(false);
   const [pendingAction, setPendingAction] = useState<'download' | 'share' | 'wallpaper' | null>(null);
 
-  const generationsLeft = 3 - (state.aiGenerations?.count ?? 0);
-
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
-
-    if (!canGenerateAI()) {
-      Alert.alert('המכסה היומית הסתיימה', 'ניתן ליצור עד 3 תמונות ביום. המכסה תתחדש מחר!');
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -163,7 +156,6 @@ export default function GenerateScreen() {
       }
 
       setImageUrl(url);
-      incrementAIUsage();
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') {
         setError('לקח יותר מדי זמן. בדוק חיבור לאינטרנט ונסה שוב ⏱');
@@ -317,7 +309,6 @@ export default function GenerateScreen() {
               )}
             </LinearGradient>
           </TouchableOpacity>
-          <Text style={styles.usageText}>נשארו לך {generationsLeft} יצירות להיום</Text>
         </View>
 
         {/* Error */}

@@ -76,6 +76,14 @@ export default function RootLayout() {
               gestureEnabled: true,
             }}
           />
+          <Stack.Screen
+            name="team/[name]"
+            options={{
+              headerShown: false,
+              animation: 'slide_from_right',
+              gestureEnabled: true,
+            }}
+          />
         </Stack>
       </OnboardingGate>
     </SafeAreaProvider>
