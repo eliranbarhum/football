@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   FlatList,
   RefreshControl,
   Dimensions,
-  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -24,7 +23,6 @@ import {
 import WallpaperCard from '../../components/WallpaperCard';
 import AdBanner from '../../components/AdBanner';
 import { usePlayerImages } from '../../hooks/usePlayerImages';
-import { getTeamBadge } from '../../lib/sportsApi';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -66,46 +64,8 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => vo
   );
 }
 
-function TeamCard({
-  item,
-  onPress,
-  apiDelay,
-}: {
-  item: TeamGroup;
-  onPress: () => void;
-  apiDelay: number;
-}) {
-  // 'gradient' = show colored gradient + initials (no logo, no API)
-  // null        = fetch from TheSportsDB
-  // https://…  = use directly
-  const isGradientOnly = item.badgeUrl === 'gradient';
-  const hasHardcodedUrl = item.badgeUrl && item.badgeUrl !== 'gradient';
-
-  const [fetchedBadgeUrl, setFetchedBadgeUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(item.badgeUrl === null);
-
-  useEffect(() => {
-    if (hasHardcodedUrl || isGradientOnly) return; // no API needed
-    if (item.badgeUrl !== null) return;
-    let cancelled = false;
-    const searchName = (item as { searchName?: string }).searchName ?? item.name;
-
-    const timer = setTimeout(() => {
-      getTeamBadge(searchName).then((url) => {
-        if (!cancelled) {
-          setFetchedBadgeUrl(url);
-          setLoading(false);
-        }
-      });
-    }, apiDelay);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [item, apiDelay, hasHardcodedUrl, isGradientOnly]);
-
-  const resolvedBadgeUrl = hasHardcodedUrl ? item.badgeUrl : fetchedBadgeUrl;
+function TeamCard({ item, onPress }: { item: TeamGroup; onPress: () => void }) {
+  const showBadge = item.badgeUrl && item.badgeUrl !== 'gradient';
 
   return (
     <TouchableOpacity onPress={onPress} style={styles.teamCard} activeOpacity={0.8}>
@@ -115,17 +75,14 @@ function TeamCard({
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        {loading ? (
-          <ActivityIndicator size="small" color={item.color} />
-        ) : resolvedBadgeUrl ? (
+        {showBadge ? (
           <Image
-            source={{ uri: resolvedBadgeUrl }}
+            source={{ uri: item.badgeUrl! }}
             style={styles.teamBadge}
             contentFit="contain"
             transition={300}
           />
         ) : (
-          // Fallback: ראשי תיבות
           <Text style={[styles.teamInitial, { color: item.color }]}>
             {item.name.slice(0, 2).toUpperCase()}
           </Text>
@@ -154,16 +111,6 @@ export default function HomeScreen() {
   const handleTeamPress = (teamFilter: string) => {
     router.push({ pathname: '/(tabs)/gallery', params: { team: teamFilter } });
   };
-
-  // Pre-compute staggered delays for Israeli teams (those with badgeUrl === null)
-  const teamDelays = React.useMemo(() => {
-    const delays: Record<string, number> = {};
-    let israeliIndex = 0;
-    for (const team of TEAM_GROUPS) {
-      delays[team.name] = team.badgeUrl === null ? israeliIndex++ * 300 : 0;
-    }
-    return delays;
-  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -251,7 +198,6 @@ export default function HomeScreen() {
             <TeamCard
               item={item}
               onPress={() => handleTeamPress(item.teamFilter)}
-              apiDelay={teamDelays[item.name] ?? 0}
             />
           )}
           ItemSeparatorComponent={() => <View style={{ width: Spacing.sm }} />}
