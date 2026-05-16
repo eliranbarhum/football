@@ -98,9 +98,9 @@ export default function InterstitialAdModal({
         <View style={styles.adContainer}>
           {/* Ad content placeholder */}
           <View style={styles.adContent}>
-            <Text style={styles.adLabel}>AD</Text>
+            <Text style={styles.adLabel}>מודעה</Text>
             <Text style={styles.adEmoji}>⚽</Text>
-            <Text style={styles.adTitle}>Football Stars</Text>
+            <Text style={styles.adTitle}>כוכבי הכדורגל</Text>
             <Text style={styles.adSubtitle}>
               הורד את כל טפטי השחקנים המעולים!
             </Text>

@@ -5,7 +5,8 @@ import { DEV_FLAGS } from '../constants/featureFlags';
 
 const STORAGE_KEY = '@football_stars_game';
 const APP_DATA_VERSION = 5;
-const USER_TEAM_NAME = 'נבחרת הכוכבים';
+const USER_TEAM_NAME = 'ברהום';
+const SEASON_LEGS = 2; // Home and Away
 
 const LEAGUE_OPPONENTS = [
   'Real Madrid',
@@ -82,6 +83,10 @@ export interface GameState {
   leagueTable: LeagueRow[];
   coins: number;
   matchStats: MatchStats;
+  aiGenerations: {
+    count: number;
+    lastReset: number;
+  };
 }
 
 const DEFAULT_LINEUP: Lineup = {
@@ -120,17 +125,16 @@ function createSeasonRounds(): Round[] {
   const teams = [...allLeagueTeams()];
   if (teams.length % 2 !== 0) teams.push('__BYE__');
 
-  const rounds: Round[] = [];
   const n = teams.length;
+  const singleLegRounds: Round[] = [];
   const arr = [...teams];
 
+  // Round-robin algorithm
   for (let r = 0; r < n - 1; r += 1) {
     const fixtures: Fixture[] = [];
-
     for (let i = 0; i < n / 2; i += 1) {
       const home = arr[i];
       const away = arr[n - 1 - i];
-
       if (home !== '__BYE__' && away !== '__BYE__') {
         fixtures.push({
           home: r % 2 === 0 ? home : away,
@@ -141,15 +145,29 @@ function createSeasonRounds(): Round[] {
         });
       }
     }
-
-    rounds.push({ round: r + 1, fixtures });
+    singleLegRounds.push({ round: r + 1, fixtures });
 
     const fixed = arr[0];
     const rotated = [fixed, arr[n - 1], ...arr.slice(1, n - 1)];
     for (let i = 0; i < n; i += 1) arr[i] = rotated[i];
   }
 
-  return rounds;
+  // Multiply by legs
+  const allRounds: Round[] = [];
+  for (let leg = 0; leg < SEASON_LEGS; leg++) {
+    singleLegRounds.forEach((r) => {
+      const roundNum = leg * (n - 1) + r.round;
+      const fixtures = r.fixtures.map((f) => ({
+        ...f,
+        // Swap home/away for even legs to simulate home/away balance
+        home: leg % 2 === 1 ? f.away : f.home,
+        away: leg % 2 === 1 ? f.home : f.away,
+      }));
+      allRounds.push({ round: roundNum, fixtures });
+    });
+  }
+
+  return allRounds;
 }
 
 const DEFAULT_STATE: GameState = {
@@ -163,6 +181,10 @@ const DEFAULT_STATE: GameState = {
   leagueTable: createLeagueTable(),
   coins: 0,
   matchStats: { wins: 0, losses: 0, draws: 0 },
+  aiGenerations: {
+    count: 0,
+    lastReset: Date.now(),
+  },
 };
 
 function computeLineupStrength(lineup: Lineup) {
@@ -452,6 +474,38 @@ export function useGameState() {
     setState(DEFAULT_STATE);
   }, []);
 
+  const addCoins = useCallback((amount: number) => {
+    save({ ...state, coins: state.coins + amount });
+  }, [state, save]);
+
+  const canGenerateAI = useCallback(() => {
+    const today = new Date().setHours(0, 0, 0, 0);
+    const lastReset = new Date(state.aiGenerations?.lastReset ?? 0).setHours(0, 0, 0, 0);
+    
+    if (today > lastReset) {
+      return true;
+    }
+    return (state.aiGenerations?.count ?? 0) < 3;
+  }, [state]);
+
+  const incrementAIUsage = useCallback(() => {
+    const today = new Date().setHours(0, 0, 0, 0);
+    const lastReset = new Date(state.aiGenerations?.lastReset ?? 0).setHours(0, 0, 0, 0);
+    
+    let newCount = (state.aiGenerations?.count ?? 0) + 1;
+    if (today > lastReset) {
+      newCount = 1;
+    }
+    
+    save({
+      ...state,
+      aiGenerations: {
+        count: newCount,
+        lastReset: Date.now(),
+      }
+    });
+  }, [state, save]);
+
   return {
     state,
     loaded,
@@ -463,5 +517,8 @@ export function useGameState() {
     playNextRound,
     resetSeason,
     resetGameState,
+    addCoins,
+    canGenerateAI,
+    incrementAIUsage,
   };
 }

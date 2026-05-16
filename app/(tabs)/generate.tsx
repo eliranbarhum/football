@@ -8,63 +8,104 @@ import {
   ScrollView,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Fonts, BorderRadius } from '../../constants/theme';
-import { searchPlayer } from '../../lib/sportsApi';
-import AdBanner from '../../components/AdBanner';
+import { downloadImage, shareImage, setAsWallpaper } from '../../services/imageService';
+import InterstitialAdModal from '../../components/InterstitialAdModal';
+import { useGameState } from '../../hooks/useGameState';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const STYLES = [
-  { id: 'realistic', label: 'ריאליסטי', emoji: '📸' },
+  { id: 'photorealistic', label: 'ריאליסטי', emoji: '📸' },
+  { id: 'anime', label: 'אנימה', emoji: '🎌' },
   { id: 'cartoon', label: 'קומיקס', emoji: '🎨' },
   { id: 'neon', label: 'ניאון', emoji: '💡' },
-  { id: 'artistic', label: 'אמנותי', emoji: '🖌️' },
+  { id: 'oil painting', label: 'אמנותי', emoji: '🖌️' },
 ];
 
 export default function GenerateScreen() {
-  const [playerName, setPlayerName] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState('realistic');
+  const { state, canGenerateAI, incrementAIUsage } = useGameState();
+  const [prompt, setPrompt] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState('photorealistic');
   const [loading, setLoading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [playerFound, setPlayerFound] = useState(false);
+  const [showAd, setShowAd] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'download' | 'share' | 'wallpaper' | null>(null);
+
+  const generationsLeft = 3 - (state.aiGenerations?.count ?? 0);
 
   const handleGenerate = async () => {
-    if (!playerName.trim()) return;
+    if (!prompt.trim()) return;
+
+    if (!canGenerateAI()) {
+      Alert.alert('המכסה היומית הסתיימה', 'ניתן ליצור עד 3 תמונות ביום. המכסה תתחדש מחר!');
+      return;
+    }
 
     setLoading(true);
     setError(null);
-    setPreviewUrl(null);
-    setPlayerFound(false);
+    setImageUrl(null);
 
     try {
-      // For now, use TheSportsDB as a preview until AI generation is implemented
-      const player = await searchPlayer(playerName.trim());
-      if (player) {
-        const url =
-          player.strFanart1 ||
-          player.strFanart2 ||
-          player.strThumb ||
-          player.strCutout ||
-          null;
-
-        if (url) {
-          setPreviewUrl(url);
-          setPlayerFound(true);
-        } else {
-          setError(`נמצא ${player.strPlayer} אך אין תמונה זמינה`);
-        }
-      } else {
-        setError(`לא נמצא שחקן בשם "${playerName}" — נסה שם אחר`);
-      }
+      // Use Pollinations.ai for free AI generation
+      const seed = Math.floor(Math.random() * 1000000);
+      const fullPrompt = `${prompt}, ${selectedStyle} style, high quality, professional football photography, 8k resolution`;
+      const encodedPrompt = encodeURIComponent(fullPrompt);
+      const url = `https://pollinations.ai/p/${encodedPrompt}?width=1024&height=1792&seed=${seed}&model=flux`;
+      
+      setImageUrl(url);
+      incrementAIUsage();
     } catch {
-      setError('שגיאה בחיבור לשרת. נסה שוב.');
+      setError('שגיאה ביצירת התמונה. נסה שוב.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!imageUrl) return;
+    setPendingAction('download');
+    setShowAd(true);
+  };
+
+  const handleShare = async () => {
+    if (!imageUrl) return;
+    setPendingAction('share');
+    setShowAd(true);
+  };
+
+  const handleSetWallpaper = async () => {
+    if (!imageUrl) return;
+    setPendingAction('wallpaper');
+    setShowAd(true);
+  };
+
+  const handleAdClose = async () => {
+    setShowAd(false);
+    if (!imageUrl) return;
+    
+    try {
+      if (pendingAction === 'download') {
+        const success = await downloadImage(imageUrl, prompt || 'ai_wallpaper');
+        if (success) Alert.alert('הצלחה!', 'התמונה נשמרה בגלריה שלך ✨');
+        else Alert.alert('שגיאה', 'לא הצלחנו לשמור את התמונה.');
+      } else if (pendingAction === 'share') {
+        await shareImage(imageUrl, prompt || 'ai_wallpaper');
+      } else if (pendingAction === 'wallpaper') {
+        const success = await setAsWallpaper(imageUrl, prompt || 'ai_wallpaper');
+        if (success) Alert.alert('הצלחה!', 'התמונה הוגדרה כשומר מסך ✨');
+        else Alert.alert('שגיאה', 'לא הצלחנו להגדיר את התמונה כשומר מסך.');
+      }
+    } catch {
+      Alert.alert('שגיאה', 'משהו השתבש...');
+    } finally {
+      setPendingAction(null);
     }
   };
 
@@ -78,48 +119,32 @@ export default function GenerateScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🤖 צור תמונה עם AI</Text>
+          <Text style={styles.headerTitle}>🤖 מעבדת ה-AI</Text>
           <Text style={styles.headerSubtitle}>
-            כתוב שם שחקן וניצור לך תמונה מדהימה!
+            תאר את התמונה שאתה רוצה וניצור אותה עבורך!
           </Text>
-        </View>
-
-        {/* Coming Soon Banner */}
-        <View style={styles.comingSoonBanner}>
-          <LinearGradient
-            colors={['rgba(0,212,255,0.15)', 'rgba(0,212,255,0.05)']}
-            style={styles.bannerGradient}
-          >
-            <Text style={styles.bannerEmoji}>🚀</Text>
-            <View style={styles.bannerText}>
-              <Text style={styles.bannerTitle}>בקרוב — AI אמיתי!</Text>
-              <Text style={styles.bannerSubtitle}>
-                בגרסה הבאה תוכל ליצור תמונות ייחודיות עם Stable Diffusion
-              </Text>
-            </View>
-          </LinearGradient>
         </View>
 
         {/* Player Input */}
         <View style={styles.inputSection}>
-          <Text style={styles.label}>שם השחקן</Text>
+          <Text style={styles.label}>מה תרצה ליצור?</Text>
           <TextInput
             style={styles.textInput}
-            value={playerName}
-            onChangeText={setPlayerName}
-            placeholder="לדוגמה: Messi, Ronaldo, Haaland..."
+            value={prompt}
+            onChangeText={setPrompt}
+            placeholder="לדוגמה: מסי משחק על הירח..."
             placeholderTextColor={Colors.textMuted}
             returnKeyType="done"
             onSubmitEditing={handleGenerate}
-            autoCorrect={false}
-            autoCapitalize="words"
+            multiline
+            numberOfLines={2}
           />
         </View>
 
         {/* Style Selector */}
         <View style={styles.styleSection}>
           <Text style={styles.label}>סגנון תמונה</Text>
-          <View style={styles.styleGrid}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.styleGrid}>
             {STYLES.map((style) => (
               <TouchableOpacity
                 key={style.id}
@@ -141,32 +166,35 @@ export default function GenerateScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Generate Button */}
-        <TouchableOpacity
-          style={[styles.generateButton, loading && styles.generateButtonDisabled]}
-          onPress={handleGenerate}
-          disabled={loading || !playerName.trim()}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={[Colors.accent, '#0099BB']}
-            style={styles.generateGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+        <View style={styles.generateContainer}>
+          <TouchableOpacity
+            style={[styles.generateButton, (loading || !prompt.trim()) && styles.generateButtonDisabled]}
+            onPress={handleGenerate}
+            disabled={loading || !prompt.trim()}
+            activeOpacity={0.85}
           >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Text style={styles.generateEmoji}>✨</Text>
-                <Text style={styles.generateText}>צור תמונה!</Text>
-              </>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={[Colors.accent, '#0099BB']}
+              style={styles.generateGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Text style={styles.generateEmoji}>✨</Text>
+                  <Text style={styles.generateText}>צור תמונת AI</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+          <Text style={styles.usageText}>נשארו לך {generationsLeft} יצירות להיום</Text>
+        </View>
 
         {/* Error */}
         {error && (
@@ -177,57 +205,71 @@ export default function GenerateScreen() {
 
         {/* Preview Area */}
         <View style={styles.previewArea}>
-          {previewUrl ? (
-            <>
+          {imageUrl ? (
+            <View>
               <Image
-                source={{ uri: previewUrl }}
+                source={{ uri: imageUrl }}
                 style={styles.previewImage}
                 contentFit="cover"
-                transition={400}
+                transition={600}
+                onLoadStart={() => setLoading(true)}
+                onLoadEnd={() => setLoading(false)}
               />
-              {playerFound && (
-                <View style={styles.previewNote}>
-                  <Text style={styles.previewNoteText}>
-                    💡 תצוגה מקדימה מ-TheSportsDB
-                  </Text>
-                  <Text style={styles.previewNoteSubtext}>
-                    בגרסה הבאה — יצירת AI מלאה!
-                  </Text>
+              {!loading && (
+                <View style={styles.previewActions}>
+                  <TouchableOpacity style={styles.actionButton} onPress={handleDownload}>
+                    <Text style={styles.actionEmoji}>📥</Text>
+                    <Text style={styles.actionText}>שמור</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionButton} onPress={handleSetWallpaper}>
+                    <Text style={styles.actionEmoji}>📱</Text>
+                    <Text style={styles.actionText}>טפט</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                    <Text style={styles.actionEmoji}>📤</Text>
+                    <Text style={styles.actionText}>שתף</Text>
+                  </TouchableOpacity>
                 </View>
               )}
-            </>
+            </View>
           ) : (
             <View style={styles.previewPlaceholder}>
               <LinearGradient
                 colors={[Colors.secondary, Colors.card]}
                 style={styles.previewPlaceholderGradient}
               >
-                <Text style={styles.placeholderEmoji}>🎭</Text>
+                <Text style={styles.placeholderEmoji}>🎨</Text>
                 <Text style={styles.placeholderText}>
-                  כאן תופיע התמונה שלך
+                  כאן תופיע היצירה שלך
                 </Text>
                 <Text style={styles.placeholderSubtext}>
-                  הכנס שם שחקן ולחץ "צור תמונה"
+                  הקלד תיאור ולחץ "צור תמונה"
                 </Text>
               </LinearGradient>
             </View>
+          )}
+          {loading && (
+             <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color={Colors.accent} />
+                <Text style={styles.loadingText}>ה-AI חושב ומצייר...</Text>
+             </View>
           )}
         </View>
 
         {/* AI Note */}
         <View style={styles.aiNote}>
           <Text style={styles.aiNoteText}>
-            🤖 מופעל על ידי Stable Diffusion AI
+            🤖 מופעל על ידי FLUX AI Engine
           </Text>
           <Text style={styles.aiNoteSubtext}>
-            בקרוב — יצירת תמונות מקוריות של שחקנים בסגנונות שונים
+            יצירת תמונות ייחודיות ובלעדיות בזמן אמת
           </Text>
         </View>
 
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>
 
-      <AdBanner />
+      <InterstitialAdModal visible={showAd} onClose={handleAdClose} />
     </SafeAreaView>
   );
 }
@@ -253,40 +295,12 @@ const styles = StyleSheet.create({
     fontSize: Fonts.sizes.xxl,
     fontWeight: '900',
     marginBottom: Spacing.xs,
+    textAlign: 'right',
   },
   headerSubtitle: {
     color: Colors.textMuted,
     fontSize: Fonts.sizes.base,
-  },
-  comingSoonBanner: {
-    marginHorizontal: Spacing.base,
-    marginBottom: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(0,212,255,0.3)',
-  },
-  bannerGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.base,
-    gap: Spacing.sm,
-  },
-  bannerEmoji: {
-    fontSize: 32,
-  },
-  bannerText: {
-    flex: 1,
-  },
-  bannerTitle: {
-    color: Colors.accent,
-    fontSize: Fonts.sizes.base,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  bannerSubtitle: {
-    color: Colors.textMuted,
-    fontSize: Fonts.sizes.sm,
+    textAlign: 'right',
   },
   inputSection: {
     paddingHorizontal: Spacing.base,
@@ -299,6 +313,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+    textAlign: 'right',
   },
   textInput: {
     backgroundColor: Colors.card,
@@ -309,17 +324,18 @@ const styles = StyleSheet.create({
     fontSize: Fonts.sizes.base,
     borderWidth: 1,
     borderColor: Colors.border,
+    textAlign: 'right',
+    minHeight: 80,
   },
   styleSection: {
-    paddingHorizontal: Spacing.base,
     marginBottom: Spacing.lg,
   },
   styleGrid: {
-    flexDirection: 'row',
+    paddingHorizontal: Spacing.base,
     gap: Spacing.sm,
   },
   styleButton: {
-    flex: 1,
+    width: 90,
     alignItems: 'center',
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.card,
@@ -343,11 +359,14 @@ const styles = StyleSheet.create({
   styleLabelActive: {
     color: Colors.accent,
   },
-  generateButton: {
+  generateContainer: {
     marginHorizontal: Spacing.base,
+    marginBottom: Spacing.base,
+  },
+  generateButton: {
     borderRadius: BorderRadius.full,
     overflow: 'hidden',
-    marginBottom: Spacing.base,
+    marginBottom: 8,
   },
   generateButtonDisabled: {
     opacity: 0.5,
@@ -366,6 +385,12 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: Fonts.sizes.lg,
     fontWeight: '900',
+  },
+  usageText: {
+    color: Colors.textMuted,
+    fontSize: Fonts.sizes.xs,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   errorBox: {
     marginHorizontal: Spacing.base,
@@ -389,33 +414,49 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.border,
-    minHeight: SCREEN_WIDTH * 0.8,
+    minHeight: SCREEN_WIDTH * 1.2,
+    backgroundColor: Colors.card,
+    position: 'relative',
   },
   previewImage: {
     width: '100%',
-    height: SCREEN_WIDTH * 0.9,
+    height: SCREEN_WIDTH * 1.4,
   },
-  previewNote: {
-    backgroundColor: Colors.card,
-    padding: Spacing.sm,
+  previewActions: {
+    position: 'absolute',
+    bottom: Spacing.base,
+    left: Spacing.base,
+    right: Spacing.base,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.base,
+  },
+  actionButton: {
+    backgroundColor: 'rgba(13, 18, 32, 0.85)',
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  previewNoteText: {
-    color: Colors.textMuted,
-    fontSize: Fonts.sizes.xs,
-    fontWeight: '600',
+  actionEmoji: {
+    fontSize: 18,
   },
-  previewNoteSubtext: {
-    color: Colors.accent,
-    fontSize: Fonts.sizes.xs,
+  actionText: {
+    color: Colors.text,
+    fontSize: Fonts.sizes.sm,
+    fontWeight: '700',
   },
   previewPlaceholder: {
     flex: 1,
-    minHeight: SCREEN_WIDTH * 0.8,
+    minHeight: SCREEN_WIDTH * 1.2,
   },
   previewPlaceholderGradient: {
     flex: 1,
-    minHeight: SCREEN_WIDTH * 0.8,
+    minHeight: SCREEN_WIDTH * 1.2,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.xl,
@@ -436,6 +477,18 @@ const styles = StyleSheet.create({
     fontSize: Fonts.sizes.sm,
     textAlign: 'center',
     opacity: 0.7,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13, 18, 32, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.base,
+  },
+  loadingText: {
+    color: Colors.text,
+    fontSize: Fonts.sizes.base,
+    fontWeight: '700',
   },
   aiNote: {
     marginHorizontal: Spacing.base,

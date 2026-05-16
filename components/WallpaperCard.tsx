@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Colors, Spacing, BorderRadius, Fonts } from '../constants/theme';
 import { Player } from '../constants/players';
+import { positionToHebrew } from '../constants/hebrew';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -130,7 +131,7 @@ export default function WallpaperCard({
           {player.displayName}
         </Text>
         <View style={styles.metaRow}>
-          <Text style={styles.position}>{player.position}</Text>
+          <Text style={styles.position}>{positionToHebrew(player.position)}</Text>
           {downloadCount > 0 && (
             <Text style={styles.downloads}>⬇ {downloadCount}</Text>
           )}

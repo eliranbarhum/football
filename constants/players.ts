@@ -2000,6 +2000,76 @@ export const PLAYERS: Player[] = [
       { question: 'מה עמדת מוראטה?', answers: ['חלוץ', 'קשר', 'בלם', 'שוער'], correctIndex: 0 },
     ],
   },
+
+  // ===== Beitar Jerusalem (User Verified Links) =====
+  {
+    id: '300', name: 'ירדן שועה', displayName: 'שועה',
+    team: 'Beitar Jerusalem', teamShort: 'BEI', nationality: 'Israel',
+    position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 7,
+    teamColor: '#FFD700', teamColorSecondary: '#000000',
+    searchName: 'Yarden Shua ירדן שועה', isFeatured: true, isPopular: true,
+    directImageUrl: 'https://www.beitarfc.co.il/wp-content/uploads/2020/12/Artboard-1-copy-29@72x.png',
+    birthDate: '16 יוני 1999', birthPlace: 'תל אביב, ישראל', height: '178cm', weight: '75kg',
+    formerTeams: ['בני יהודה', 'מכבי חיפה'],
+    funFact: 'הקפטן של בית"ר ומלך הבישולים של הליגה כבר כמה עונות ברצף!',
+    quizQuestions: [
+      { question: 'מה מספר החולצה של ירדן שועה?', answers: ['7', '10', '11', '8'], correctIndex: 0 },
+      { question: 'באיזו קבוצה שיחק שועה לפני בית"ר?', answers: ['מכבי חיפה', 'מכבי ת"א', 'הפועל ת"א', 'הפועל ב"ש'], correctIndex: 0 },
+      { question: 'מה התפקיד של שועה בקבוצה?', answers: ['קפטן וחלוץ', 'שוער', 'בלם', 'מגן ימני'], correctIndex: 0 },
+      { question: 'במה שועה מצטיין במיוחד?', answers: ['בישולים ומסירות', 'נגיחות', 'הדיפת פנדלים', 'תיקולים'], correctIndex: 0 },
+    ],
+  },
+  {
+    id: '303', name: 'דור מיכה', displayName: 'מיכה',
+    team: 'Beitar Jerusalem', teamShort: 'BEI', nationality: 'Israel',
+    position: 'Midfielder', league: 'Israeli Premier League', jerseyNumber: 15,
+    teamColor: '#FFD700', teamColorSecondary: '#000000',
+    searchName: 'Dor Micha דור מיכה', isFeatured: false, isPopular: true,
+    directImageUrl: 'https://www.beitarfc.co.il/wp-content/uploads/2026/02/%D7%AA%D7%9E%D7%95%D7%A0%D7%95%D7%AA-%D7%A9%D7%97%D7%A7%D7%A0%D7%99%D7%9D-%D7%9E%D7%92%D7%9F-126.png',
+    birthDate: '2 מרץ 1992', birthPlace: 'גבעתיים, ישראל', height: '176cm', weight: '71kg',
+    formerTeams: ['מכבי ת"א', 'Anorthosis Famagusta', 'הפועל ב"ש'],
+    funFact: 'אחד המוסרים הטובים ביותר בתולדות הליגה הישראלית, זכה בתארים רבים!',
+    quizQuestions: [
+      { question: 'באיזו קבוצה מזוהה דור מיכה הכי הרבה שנים?', answers: ['מכבי ת"א', 'ביתר ירושלים', 'הפועל ת"א', 'מכבי חיפה'], correctIndex: 0 },
+      { question: 'מה מספר החולצה של דור מיכה בבית"ר?', answers: ['15', '10', '7', '8'], correctIndex: 0 },
+      { question: 'מה היכולת הכי בולטת של דור מיכה?', answers: ['מסירות מפתח', 'נגיחות', 'מהירות', 'כוח פיזי'], correctIndex: 0 },
+      { question: 'באיזו מדינה שיחק דור מיכה מחוץ לישראל?', answers: ['קפריסין', 'ספרד', 'אנגליה', 'יוון'], correctIndex: 0 },
+    ],
+  },
+  {
+    id: '307', name: 'טימוטי מוזי', displayName: 'מוזי',
+    team: 'Beitar Jerusalem', teamShort: 'BEI', nationality: 'Israel',
+    position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 11,
+    teamColor: '#FFD700', teamColorSecondary: '#000000',
+    searchName: 'Timothy Muzie טימוטי מוזי', isFeatured: false, isPopular: false,
+    directImageUrl: 'https://www.beitarfc.co.il/wp-content/uploads/2023/07/Artboard-1-copy-48@72x.png',
+    birthDate: '24 אוגוסט 2001', birthPlace: 'ישראל', height: '175cm', weight: '70kg',
+    formerTeams: ['מכבי חיפה', 'הפועל נוף הגליל'],
+    funFact: 'שחקן התקפה מהיר מאוד שיכול לשחק גם כמגן וגם ככנף!',
+    quizQuestions: [
+      { question: 'מה המאפיין הבולט של טימוטי מוזי?', answers: ['מהירות', 'גובה', 'כוח פיזי', 'הדיפת כדורים'], correctIndex: 0 },
+      { question: 'מה מספר החולצה של טימוטי מוזי?', answers: ['11', '7', '9', '10'], correctIndex: 0 },
+      { question: 'באילו עמדות מוזי יכול לשחק?', answers: ['כנף ומגן', 'שוער ובלם', 'רק כחלוץ מרכזי', 'רק כקשר אחורי'], correctIndex: 0 },
+      { question: 'באיזו קבוצה גדל טימוטי מוזי?', answers: ['מכבי חיפה', 'בית"ר ירושלים', 'הפועל ת"א', 'מכבי ת"א'], correctIndex: 0 },
+    ],
+  },
+  {
+    id: '316', name: 'עומר אצילי', displayName: 'אצילי',
+    team: 'Omonia Nicosia', teamShort: 'OMO', nationality: 'Israel',
+    position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 7,
+    teamColor: '#008000', teamColorSecondary: '#FFFFFF',
+    searchName: 'Omer Atzili עומר אצילי', isFeatured: true, isPopular: true,
+    directImageUrl: 'https://www.beitarfc.co.il/wp-content/uploads/2025/02/Artboard-1-copy-9@72x.png',
+    birthDate: '27 יולי 1993', birthPlace: 'חולון, ישראל', height: '180cm', weight: '74kg',
+    formerTeams: ['בית"ר ירושלים', 'Granada', 'מכבי ת"א', 'APOEL', 'מכבי חיפה', 'Al Ain'],
+    funFact: 'זכה בתואר כדורגלן העונה בליגת העל כמה פעמים ברצף!',
+    quizQuestions: [
+      { question: 'באיזו קבוצה ישראלית פרץ אצילי לראשונה?', answers: ['בית"ר ירושלים', 'הפועל ראשל"צ', 'מכבי ת"א', 'מכבי חיפה'], correctIndex: 0 },
+      { question: 'מה מספר החולצה של אצילי?', answers: ['7', '10', '11', '8'], correctIndex: 0 },
+      { question: 'באיזו מדינה משחק אצילי כיום (2024)?', answers: ['קפריסין', 'ישראל', 'ספרד', 'איחוד האמירויות'], correctIndex: 0 },
+      { question: 'כמה אליפויות רצופות ניצח עם מכבי חיפה?', answers: ['3', '1', '2', '4'], correctIndex: 0 },
+    ],
+  },
 ];
 
 export const LEAGUES = [
@@ -2022,4 +2092,14 @@ export function getPlayerById(id: string): Player | undefined {
 export function getPlayersByLeague(league: string): Player[] {
   if (league === 'all') return PLAYERS;
   return PLAYERS.filter((p) => p.league === league);
+}
+
+export function getPlayersByTeam(team: string): Player[] {
+  return PLAYERS.filter((p) => p.team === team);
+}
+
+export function getAllTeams(): string[] {
+  return Array.from(new Set(PLAYERS.map((p) => p.team))).sort((a, b) =>
+    a.localeCompare(b)
+  );
 }

@@ -14,7 +14,6 @@ import { PLAYERS, getPlayersByLeague, Player } from '../../constants/players';
 import WallpaperCard from '../../components/WallpaperCard';
 import SearchBar from '../../components/SearchBar';
 import CategoryFilter from '../../components/CategoryFilter';
-import AdBanner from '../../components/AdBanner';
 import { usePlayerImages } from '../../hooks/usePlayerImages';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -137,8 +136,6 @@ export default function GalleryScreen() {
           }
         />
       )}
-
-      <AdBanner />
     </SafeAreaView>
   );
 }

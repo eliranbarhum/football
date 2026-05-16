@@ -1,0 +1,148 @@
+# Football Stars - Agent Operating File (.ai)
+
+## Purpose
+This file is the single source of truth for AI/code agents working on this repository.
+Every agent MUST read this file before making code changes.
+Every agent MUST update this file in the same PR/commit whenever behavior, flow, data model, routes, or UX rules change.
+
+---
+
+## Product Summary
+Football Stars is an educational football app for kids (age 6-12), focused on Hebrew UX.
+Core loop:
+1. ילד בוחר קבוצה מועדפת במסך פתיחה.
+2. לומד על שחקנים ועונה על שאלות.
+3. פותח שחקנים אחרי 4 תשובות נכונות.
+4. בונה סגל.
+5. עובר לשלב B ומנהל עונת ליגה.
+
+---
+
+## Current App Behavior (Canonical)
+
+### Onboarding
+- Route: `/onboarding`
+- Mandatory for new/invalid state.
+- Team list is generated dynamically from `PLAYERS` teams.
+- User must select a team to continue.
+### Navigation / Tabs
+- `/(tabs)/index` = בית
+- `/(tabs)/management` = ניהול קבוצה (Unlocked at 21 players)
+- `/(tabs)/squad` = הסגל שלי
+- `/(tabs)/gallery` = שחקנים
+- `/(tabs)/generate` = AI (Restored prompt-based generation)
+
+### Player Quiz Rules
+- Wrong answer closes question and is not counted.
+- Correct answer increments progress.
+- Player unlock at 4 correct answers.
+- Answers are randomized per question view.
+
+### Squad Rules
+- Shows ALL players from the favorite team with locked/unlocked visual state.
+- Unlocked = green glow border + ✅ badge; Locked = dark overlay + 🔒 + X/4 progress.
+- DEV_FLAGS.UNLOCK_21_PLAYERS_FOR_TESTS overrides unlock status (routes all checks through getUnlockedPlayers()).
+- Management gate opens at 21 unlocked players.
+
+### Management (League Season v2)
+- Route: `/(tabs)/management`
+- 4-3-3 slot lineup with role constraints:
+  - `gk` -> Goalkeeper only
+  - back line slots -> Defender
+  - front/mid slots -> Midfielder or Forward
+- No duplicate player assignment across slots.
+- Includes `קבע הרכב אוטומטי` action to auto-fill lineup by slot rules without duplicate players.
+- Double-leg league season (Home and Away) with rounds and fixtures.
+- Play progresses round by round (`שחק מחזור`).
+- Every round simulates all fixtures, updates league table and user stats.
+- Match result UI uses visual modal (score + teams + coins).
+- **Post-Match Bonus:** Chance to double match coins by answering a random football quiz question.
+- End-of-season reward:
+  - If user finishes 1st place, show championship popup with trophy and grant championship coins bonus.
+- Season can be reset via `עונה חדשה`.
+
+### Monetization & Ads
+- **Strategy:** No persistent banners. Use Interstitial ads (Modal) to avoid UI clutter.
+- **Trigger:** Show ad when user performs a "Value Action" (Download, Set Wallpaper, Share).
+- **Component:** `components/InterstitialAdModal.tsx` handles the countdown and ad simulation.
+
+### AI Image Generation
+- Route: `/(tabs)/generate`
+- Receives Hebrew/English prompts from user.
+- Supports multiple styles (Realistic, Anime, Cartoon, Neon, Oil Painting).
+- Powered by Pollinations AI (FLUX engine).
+- **Actions:** Download to gallery, Share, and **Directly set as wallpaper**.
+- **Monetization:** Value actions trigger an interstitial ad modal.
+
+
+### Temporary QA Override (Development)
+- File: `constants/featureFlags.ts`
+- Flags:
+  - `UNLOCK_21_PLAYERS_FOR_TESTS`
+  - `QA_UNLOCKED_PLAYERS_COUNT`
+- In `__DEV__`, unlocks at least 40 players for QA with role-priority pool.
+- Ignored in production runtime.
+
+---
+
+## Data Model (Game State)
+Defined in `hooks/useGameState.ts`.
+
+`GameState` includes:
+- `appDataVersion`
+- `onboardingDone`
+- `favoriteTeam`
+- `playerProgress`
+- `lineup`
+- `seasonRounds: Round[]`
+- `currentRound`
+- `leagueTable: LeagueRow[]`
+- `coins`
+- `matchStats`
+
+`Round`:
+- `round`
+- `fixtures: Fixture[]`
+
+`Fixture`:
+- `home`, `away`, `played`, `homeGoals`, `awayGoals`
+
+`LeagueRow`:
+- `team`, `played`, `wins`, `draws`, `losses`, `gf`, `ga`, `gd`, `pts`
+
+Storage key:
+- `@football_stars_game`
+
+Versioning:
+- Current `appDataVersion`: `5`
+- On mismatch -> reset to default state.
+
+---
+
+## Critical UX Constraints
+1. Wrong answers must never be counted as correct.
+2. Onboarding must not be skipped on fresh/invalid state.
+3. Stage B gate remains enforced at configured threshold.
+4. Stage B must enforce slot-role constraints and no duplicate assignment.
+5. Season progression must be sequential by rounds.
+6. All user-facing UI text should remain Hebrew-first.
+
+---
+
+## Agent Change Protocol (Mandatory)
+For every functional change, agents MUST:
+1. Update this `.ai` file in the same change set.
+2. Update behavior/data sections if relevant.
+3. Keep exact thresholds/routes/version values accurate.
+4. If `.ai` not updated for behavior/model changes, task is incomplete.
+
+---
+
+## Quick Validation Checklist for Agents
+- `npx tsc --noEmit` passes.
+- Flow: onboarding -> quiz unlock -> squad -> stage B.
+- Stage B:
+  - lineup can be completed with role constraints.
+  - playing a round updates fixtures and table.
+  - season reset works.
+- `.ai` synchronized with actual code.

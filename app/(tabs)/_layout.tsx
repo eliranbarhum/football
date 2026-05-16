@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import { Text, StyleSheet, View } from 'react-native';
 import { Colors, Fonts } from '../../constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useGameState } from '../../hooks/useGameState';
 
 interface TabIconProps {
   emoji: string;
@@ -16,11 +18,22 @@ function TabIcon({ emoji, focused }: TabIconProps) {
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const { getUnlockedPlayers } = useGameState();
+  const unlockedCount = getUnlockedPlayers().length;
+  const isManagementUnlocked = unlockedCount >= 21;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: 60 + insets.bottom,
+            paddingBottom: Math.max(6, insets.bottom),
+          },
+        ],
         tabBarActiveTintColor: Colors.accent,
         tabBarInactiveTintColor: Colors.textMuted,
         tabBarLabelStyle: styles.tabLabel,
@@ -34,17 +47,32 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="management"
+        options={{
+          title: 'ניהול קבוצה',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" focused={focused} />,
+          href: isManagementUnlocked ? ('/(tabs)/management' as never) : null,
+        }}
+      />
+      <Tabs.Screen
+        name="squad"
+        options={{
+          title: 'הסגל שלי',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🛡️" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="gallery"
         options={{
-          title: 'גלריה',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🖼️" focused={focused} />,
+          title: 'שחקנים',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="⚽" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="generate"
         options={{
-          title: 'צור תמונה',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="✨" focused={focused} />,
+          title: 'AI',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🤖" focused={focused} />,
         }}
       />
     </Tabs>
@@ -57,8 +85,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#252D3D',
     paddingTop: 4,
-    paddingBottom: 4,
-    height: 60,
+    paddingBottom: 6,
+    height: 66,
   },
   tabLabel: {
     fontSize: Fonts.sizes.xs,

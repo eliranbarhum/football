@@ -179,10 +179,10 @@ export default function SquadScreen() {
         </View>
       </View>
 
-      {/* Stage B progress card */}
+      {/* Management progress card */}
       <View style={styles.stageBCard}>
         <View style={styles.stageBRow}>
-          <Text style={styles.stageBLabel}>התקדמות לשלב B</Text>
+          <Text style={styles.stageBLabel}>התקדמות לניהול קבוצה</Text>
           <Text style={styles.stageBCount}>{totalUnlocked}/{STAGE_B_GOAL}</Text>
         </View>
         <View style={styles.progressTrack}>
@@ -190,14 +190,14 @@ export default function SquadScreen() {
         </View>
         <TouchableOpacity
           style={[styles.stageBBtn, !canStartStageB && styles.stageBBtnLocked]}
-          onPress={() => canStartStageB && router.push('/stage-b' as never)}
+          onPress={() => canStartStageB && router.push('/management' as never)}
           disabled={!canStartStageB}
           activeOpacity={canStartStageB ? 0.85 : 1}
         >
           <Text style={[styles.stageBBtnText, !canStartStageB && styles.stageBBtnTextLocked]}>
             {canStartStageB
-              ? '🏆 שלב B: ניהול ליגה — כנס!'
-              : `🔒 שלב B נפתח ב-${STAGE_B_GOAL} שחקנים`}
+              ? '📋 ניהול קבוצה — כנס!'
+              : `🔒 ניהול קבוצה נפתח ב-${STAGE_B_GOAL} שחקנים`}
           </Text>
         </TouchableOpacity>
       </View>

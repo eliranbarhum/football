@@ -21,7 +21,6 @@ import {
   Player,
 } from '../../constants/players';
 import WallpaperCard from '../../components/WallpaperCard';
-import AdBanner from '../../components/AdBanner';
 import { usePlayerImages } from '../../hooks/usePlayerImages';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -178,7 +177,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.headerSubtitle}>ברוכים הבאים 👋</Text>
-            <Text style={styles.headerTitle}>Football Stars ⚽</Text>
+            <Text style={styles.headerTitle}>כוכבי הכדורגל ⚽</Text>
           </View>
           <View style={styles.israelBadge}>
             <Text style={styles.israelText}>🇮🇱</Text>
@@ -269,8 +268,6 @@ export default function HomeScreen() {
 
         <View style={{ height: 80 }} />
       </ScrollView>
-
-      <AdBanner />
     </SafeAreaView>
   );
 }

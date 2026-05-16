@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Animated,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,8 +18,8 @@ import { Colors, Spacing, Fonts, BorderRadius } from '../../constants/theme';
 import { getPlayerById } from '../../constants/players';
 import { downloadImage, shareImage, setAsWallpaper } from '../../services/imageService';
 import InterstitialAdModal from '../../components/InterstitialAdModal';
-import AdBanner from '../../components/AdBanner';
 import { useGameState } from '../../hooks/useGameState';
+import { positionToHebrew } from '../../constants/hebrew';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -87,11 +88,36 @@ function QuizTab({
   playerId: string;
   questions: { question: string; answers: string[]; correctIndex: number }[];
 }) {
+  const router = useRouter();
   const { getPlayerProgress, answerQuestion } = useGameState();
   const progress = getPlayerProgress(playerId);
   const [currentQ, setCurrentQ] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [showUnlockCelebration, setShowUnlockCelebration] = useState(false);
+  const [justUnlocked, setJustUnlocked] = useState(false);
+
+  const shuffledQuestions = useMemo(() => {
+    const shuffle = (arr: string[]) => {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+
+    return questions.map((q) => {
+      const correctAnswer = q.answers[q.correctIndex];
+      const shuffledAnswers = shuffle(q.answers);
+      const newCorrectIndex = shuffledAnswers.findIndex((a) => a === correctAnswer);
+      return {
+        question: q.question,
+        answers: shuffledAnswers,
+        correctIndex: newCorrectIndex,
+      };
+    });
+  }, [playerId, questions]);
 
   const unanswered = questions
     .map((_, i) => i)
@@ -104,37 +130,101 @@ function QuizTab({
   };
 
   const handleAnswer = (answerIndex: number) => {
-    if (revealed) return;
+    if (revealed || currentQ === null) return;
+
+    const isCorrect = answerIndex === shuffledQuestions[currentQ].correctIndex;
+
+    if (!isCorrect) {
+      setSelected(answerIndex);
+      setTimeout(() => {
+        setCurrentQ(null);
+        setSelected(null);
+        setRevealed(false);
+      }, 250);
+      return;
+    }
+
     setSelected(answerIndex);
     setRevealed(true);
   };
 
   const handleNext = () => {
     if (currentQ === null) return;
-    const correct = selected === questions[currentQ].correctIndex;
-    answerQuestion(playerId, currentQ, correct);
+    const correct = selected === shuffledQuestions[currentQ].correctIndex;
+    const willUnlock = correct && progress.correctAnswers + 1 >= 4;
+
+    if (correct) {
+      answerQuestion(playerId, currentQ, true);
+    }
+
     setCurrentQ(null);
     setSelected(null);
     setRevealed(false);
+
+    if (willUnlock) {
+      setJustUnlocked(true);
+      setShowUnlockCelebration(true);
+    }
   };
+
+  useEffect(() => {
+    if (!justUnlocked || !progress.unlocked) return;
+
+    const timer = setTimeout(() => {
+      router.replace('/(tabs)/squad' as never);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [justUnlocked, progress.unlocked, router]);
 
   const correctCount = progress.correctAnswers;
   const totalAnswered = progress.answeredIndices.length;
 
   if (progress.unlocked) {
     return (
-      <View style={quizStyles.unlockedContainer}>
-        <Text style={quizStyles.unlockedEmoji}>🏆</Text>
-        <Text style={quizStyles.unlockedTitle}>שחקן נפתח!</Text>
-        <Text style={quizStyles.unlockedSub}>
-          ענית נכון על {correctCount}/4 שאלות{'\n'}השחקן הצטרף לסגל שלך!
-        </Text>
-      </View>
+      <>
+        <View style={quizStyles.unlockedContainer}>
+          <Text style={quizStyles.unlockedEmoji}>🏆</Text>
+          <Text style={quizStyles.unlockedTitle}>שחקן נפתח!</Text>
+          <Text style={quizStyles.unlockedSub}>
+            ענית נכון על {correctCount}/4 שאלות{'\n'}השחקן הצטרף לסגל שלך!
+          </Text>
+        </View>
+
+        <Modal visible={showUnlockCelebration} transparent animationType="fade">
+          <View style={quizStyles.celebrationBackdrop}>
+            <View style={quizStyles.celebrationCard}>
+              <Text style={quizStyles.celebrationEmoji}>🎉</Text>
+              <Text style={quizStyles.celebrationTitle}>כל הכבוד!</Text>
+              <Text style={quizStyles.celebrationText}>
+                פתחת את השחקן בהצלחה והוא מוכן לשחק בסגל שלך.
+              </Text>
+
+              <TouchableOpacity
+                style={quizStyles.celebrationPrimary}
+                onPress={() => {
+                  setShowUnlockCelebration(false);
+                  router.push('/(tabs)/squad' as never);
+                }}
+              >
+                <Text style={quizStyles.celebrationPrimaryText}>לעבור להסגל שלי</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={quizStyles.celebrationSecondary}
+                onPress={() => setShowUnlockCelebration(false)}
+              >
+                <Text style={quizStyles.celebrationSecondaryText}>להישאר כאן</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </>
     );
   }
 
   if (currentQ !== null) {
-    const q = questions[currentQ];
+    const q = shuffledQuestions[currentQ];
     return (
       <View style={quizStyles.questionContainer}>
         <Text style={quizStyles.questionNumber}>שאלה {currentQ + 1}/4</Text>
@@ -175,9 +265,6 @@ function QuizTab({
                 {revealed && i === q.correctIndex && (
                   <Text style={quizStyles.answerIcon}>✓</Text>
                 )}
-                {revealed && i === selected && i !== q.correctIndex && (
-                  <Text style={[quizStyles.answerIcon, { color: '#FF4444' }]}>✗</Text>
-                )}
               </TouchableOpacity>
             );
           })}
@@ -214,7 +301,7 @@ function QuizTab({
       </View>
 
       {/* Questions list */}
-      {questions.map((q, i) => {
+      {shuffledQuestions.map((q, i) => {
         const answered = progress.answeredIndices.includes(i);
         return (
           <TouchableOpacity
@@ -298,6 +385,45 @@ const quizStyles = StyleSheet.create({
   unlockedEmoji: { fontSize: 64 },
   unlockedTitle: { color: Colors.text, fontSize: Fonts.sizes.xxl, fontWeight: '900' },
   unlockedSub: { color: Colors.textMuted, fontSize: Fonts.sizes.base, textAlign: 'center', lineHeight: 24 },
+  celebrationBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(6,10,18,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.base,
+  },
+  celebrationCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#121a2d',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(38,208,124,0.8)',
+    padding: Spacing.lg,
+    alignItems: 'center',
+  },
+  celebrationEmoji: { fontSize: 42, marginBottom: Spacing.xs },
+  celebrationTitle: { color: Colors.text, fontSize: Fonts.sizes.xl, fontWeight: '900', marginBottom: 6 },
+  celebrationText: { color: Colors.textMuted, fontSize: Fonts.sizes.base, textAlign: 'center', marginBottom: Spacing.base },
+  celebrationPrimary: {
+    width: '100%',
+    backgroundColor: '#26D07C',
+    borderRadius: BorderRadius.full,
+    paddingVertical: Spacing.sm + 2,
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  celebrationPrimaryText: { color: '#032012', fontWeight: '900', fontSize: Fonts.sizes.sm },
+  celebrationSecondary: {
+    width: '100%',
+    borderRadius: BorderRadius.full,
+    paddingVertical: Spacing.sm + 2,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
+  },
+  celebrationSecondaryText: { color: Colors.text, fontWeight: '700', fontSize: Fonts.sizes.sm },
 });
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
@@ -450,7 +576,7 @@ export default function WallpaperDetailScreen() {
             <InfoRow icon="📏" label="גובה" value={player.height} />
             <InfoRow icon="⚖️" label="משקל" value={player.weight} />
             <InfoRow icon="🌍" label="לאומיות" value={player.nationality} />
-            <InfoRow icon="⚽" label="עמדה" value={player.position} />
+            <InfoRow icon="⚽" label="עמדה" value={positionToHebrew(player.position)} />
             <InfoRow icon="🔢" label="מספר חולצה" value={`#${player.jerseyNumber}`} />
             {player.formerTeams.length > 0 && (
               <InfoRow
@@ -506,8 +632,6 @@ export default function WallpaperDetailScreen() {
                 <Text style={styles.actionText}>שתף</Text>
               </TouchableOpacity>
             </View>
-
-            <AdBanner />
           </View>
         )}
 
