@@ -57,7 +57,7 @@ export default function GenerateScreen() {
       const seed = Math.floor(Math.random() * 1000000);
       const fullPrompt = `${prompt}, ${selectedStyle} style, high quality, professional football photography, 8k resolution`;
       const encodedPrompt = encodeURIComponent(fullPrompt);
-      const url = `https://pollinations.ai/p/${encodedPrompt}?width=1024&height=1792&seed=${seed}&model=flux`;
+      const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1792&seed=${seed}&model=flux&nologo=true`;
       
       setImageUrl(url);
       incrementAIUsage();

@@ -479,9 +479,12 @@ export function useGameState() {
   }, [state, save]);
 
   const canGenerateAI = useCallback(() => {
+    // In DEV mode — no limit
+    if (__DEV__ && DEV_FLAGS.UNLOCK_21_PLAYERS_FOR_TESTS) return true;
+
     const today = new Date().setHours(0, 0, 0, 0);
     const lastReset = new Date(state.aiGenerations?.lastReset ?? 0).setHours(0, 0, 0, 0);
-    
+
     if (today > lastReset) {
       return true;
     }
