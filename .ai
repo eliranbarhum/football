@@ -18,114 +18,176 @@ Core loop:
 
 ---
 
+## Data Sources & Architecture
+
+### Where does all data come from?
+
+#### Player Data (bio, stats, quiz)
+- **Source:** 100% hardcoded in `constants/players.ts` — compiled into the app bundle.
+- **No API calls.** No network requests for player data.
+- Fields per player: `name`, `displayName`, `team`, `league`, `position`, `jerseyNumber`,
+  `birthDate`, `birthPlace`, `height`, `weight`, `nationality`, `formerTeams`, `funFact`,
+  `teamColor`, `teamColorSecondary`, `isFeatured`, `isPopular`, `directImageUrl`, `quizQuestions[]`.
+- **Quiz questions:** Also hardcoded in `players.ts`. Each player has 4 questions,
+  each with 4 answer options and a `correctIndex`. Shuffled on every view in `wallpaper/[id].tsx`.
+- **Total players:** 112+ across 6 leagues.
+- **Adding/editing players:** Edit `constants/players.ts` directly. Redeploy app to users.
+
+#### Player Images
+- **Source:** `directImageUrl` field on each Player — a hardcoded CDN URL.
+- **CDN:** `r2.thesportsdb.com/images/media/player/cutout/...` (TheSportsDB R2 storage, free).
+- **No API key required.** Direct HTTPS URL to pre-fetched cutout PNG.
+- **No dynamic lookup.** URLs were manually copied from TheSportsDB and baked into `players.ts`.
+- **Israeli players (Beitar, Maccabi, etc.):** Most have no `directImageUrl` — show gradient fallback.
+- **When is the image fetched?** On first render of the image component (`expo-image`).
+  `expo-image` caches downloaded images on-device automatically.
+- **After first load:** Served from `expo-image` disk cache — no network request.
+- **Hook:** `hooks/usePlayerImages.ts` — pure `useMemo`, zero network calls, zero useEffect.
+  Just maps `player.directImageUrl` to the `PlayerImageData` structure. If URL is empty → `null`.
+
+#### Team Badges (Onboarding Screen)
+- **Source:** Hardcoded `BADGE_MAP` in `app/onboarding.tsx`.
+- **CDN:** `crests.football-data.org/{id}.svg` (football-data.org, free SVG crests, no API key).
+- **Loaded by:** `expo-image` on first render of the onboarding team grid.
+- **Cached by:** `expo-image` disk cache after first load.
+- **Israeli teams:** No entry in `BADGE_MAP` → render gradient circle with Hebrew initials (no network).
+
+#### Game State / Progress
+- **Source:** `AsyncStorage` key `@football_stars_game`.
+- **Format:** Single JSON blob (see Data Model section below).
+- **Load:** Once on app start inside `useGameState` hook (`useEffect` → `AsyncStorage.getItem`).
+- **Save:** Synchronously on every state mutation via `save()` callback (`AsyncStorage.setItem`).
+- **No server sync.** Progress is local-only. Uninstalling the app = data lost.
+- **Version migration:** `appDataVersion` mismatch → reset state to DEFAULT_STATE → force onboarding.
+
+#### AI Image Generation
+- **Source:** Live API call to `https://pollinations.ai/p/{prompt}?width=1024&height=1792&model=flux`
+- **Trigger:** User taps "צור תמונת AI" in `/(tabs)/generate`.
+- **No caching.** Each generation is a fresh HTTP request. New seed = new image.
+- **No API key.** Pollinations AI is free/open.
+- **Result:** URL returned, rendered in `<Image>`. Not persisted unless user downloads.
+
+#### Image Download / Share / Wallpaper
+- **Flow:** `services/imageService.ts` downloads image URL → `expo-file-system` saves to device cache →
+  `expo-media-library` creates asset in photo library (for download/wallpaper) or
+  `expo-sharing` shares the file (for share).
+- **Wallpaper on iOS/Android:** Save to gallery; user sets it manually from Photos. No native wallpaper API.
+
+### Summary Table
+
+| Data | Source | Network? | Cached? | On every open? |
+|------|--------|----------|---------|----------------|
+| Player bio / quiz | `constants/players.ts` (bundle) | ❌ Never | N/A (bundle) | ❌ No |
+| Player images | `r2.thesportsdb.com` CDN | ✅ First load | ✅ expo-image disk cache | ❌ After first load |
+| Team badges | `crests.football-data.org` SVG | ✅ First load | ✅ expo-image disk cache | ❌ After first load |
+| Game progress | `AsyncStorage` local | ❌ Never | N/A (local) | ✅ Yes (fast, sync) |
+| AI generation | `pollinations.ai` live API | ✅ Every time | ❌ No | Only on demand |
+
+---
+
 ## Current App Behavior (Canonical)
 
 ### Onboarding
 - Route: `/onboarding`
 - Mandatory for new/invalid state.
-- Team list is generated dynamically from `PLAYERS` teams.
+- Team list is generated dynamically from `PLAYERS` teams (min 2 players per team).
 - User must select a team to continue.
+
 ### Navigation / Tabs
 - `/(tabs)/index` = בית
 - `/(tabs)/management` = ניהול קבוצה (Unlocked at 21 players)
 - `/(tabs)/squad` = הסגל שלי
 - `/(tabs)/gallery` = שחקנים
-- `/(tabs)/generate` = AI (Restored prompt-based generation)
+- `/(tabs)/generate` = AI (prompt-based generation via Pollinations)
 
 ### Player Quiz Rules
-- Wrong answer closes question and is not counted.
-- Correct answer increments progress.
-- Player unlock at 4 correct answers.
-- Answers are randomized per question view.
+- Wrong answer closes question immediately (250ms delay) and is NOT counted.
+- Correct answer increments `correctAnswers` in `playerProgress`.
+- Player unlock at 4 correct answers (`unlocked: true` in state).
+- Each question index tracked in `answeredIndices` to prevent re-answering.
+- Answers are reshuffled on every question view.
 
 ### Squad Rules
 - Shows ALL players from the favorite team with locked/unlocked visual state.
 - Unlocked = green glow border + ✅ badge; Locked = dark overlay + 🔒 + X/4 progress.
-- DEV_FLAGS.UNLOCK_21_PLAYERS_FOR_TESTS overrides unlock status (routes all checks through getUnlockedPlayers()).
-- Management gate opens at 21 unlocked players.
+- DEV_FLAGS.UNLOCK_21_PLAYERS_FOR_TESTS overrides unlock status (routes all checks through `getUnlockedPlayers()`).
+- Stage B progress bar = total unlocked across ALL teams (not just favorite).
+- Two header buttons: 🔄 קבוצה (navigate to onboarding, no data loss) | 🗑 איפוס (wipe all data + onboarding).
 
 ### Management (League Season v2)
 - Route: `/(tabs)/management`
 - 4-3-3 slot lineup with role constraints:
-  - `gk` -> Goalkeeper only
-  - back line slots -> Defender
-  - front/mid slots -> Midfielder or Forward
+  - `gk` → Goalkeeper only
+  - back line slots → Defender
+  - mid/wing/st slots → Midfielder or Forward
 - No duplicate player assignment across slots.
-- Includes `קבע הרכב אוטומטי` action to auto-fill lineup by slot rules without duplicate players.
-- Double-leg league season (Home and Away) with rounds and fixtures.
+- `קבע הרכב אוטומטי` auto-fills lineup by slot rules without duplicates.
+- Double-leg round-robin league season (10 teams × 9 rounds).
 - Play progresses round by round (`שחק מחזור`).
 - Every round simulates all fixtures, updates league table and user stats.
-- Match result UI uses visual modal (score + teams + coins).
+- Match result UI: visual modal (score + teams + coins earned).
 - **Post-Match Bonus:** Chance to double match coins by answering a random football quiz question.
-- End-of-season reward:
-  - If user finishes 1st place, show championship popup with trophy and grant championship coins bonus.
+- **Championship:** If user finishes 1st place, show trophy popup + championship coins bonus (200).
 - Season can be reset via `עונה חדשה`.
 
 ### Monetization & Ads
-- **Strategy:** No persistent banners. Use Interstitial ads (Modal) to avoid UI clutter.
-- **Trigger:** Show ad when user performs a "Value Action" (Download, Set Wallpaper, Share).
-- **Component:** `components/InterstitialAdModal.tsx` handles the countdown and ad simulation.
+- **Strategy:** No persistent banners. Interstitial ads (Modal) on value actions only.
+- **Trigger:** Download, Set Wallpaper, Share image.
+- **Component:** `components/InterstitialAdModal.tsx` — countdown + ad simulation.
 
 ### AI Image Generation
 - Route: `/(tabs)/generate`
-- Receives Hebrew/English prompts from user.
-- Supports multiple styles (Realistic, Anime, Cartoon, Neon, Oil Painting).
-- Powered by Pollinations AI (FLUX engine).
-- **Actions:** Download to gallery, Share, and **Directly set as wallpaper**.
-- **Monetization:** Value actions trigger an interstitial ad modal.
-
+- Hebrew/English prompt input.
+- Multiple styles: Realistic, Anime, Cartoon, Neon, Oil Painting.
+- Powered by Pollinations AI (FLUX model, 1024×1792px).
+- Actions: Download to gallery, Share, Set as wallpaper — all trigger interstitial ad.
 
 ### Temporary QA Override (Development)
 - File: `constants/featureFlags.ts`
-- Flags:
-  - `UNLOCK_21_PLAYERS_FOR_TESTS`
-  - `QA_UNLOCKED_PLAYERS_COUNT`
-- In `__DEV__`, unlocks at least 40 players for QA with role-priority pool.
-- Ignored in production runtime.
+- `UNLOCK_21_PLAYERS_FOR_TESTS: true` → `getUnlockedPlayers()` returns 40 role-priority players in `__DEV__`.
+- `QA_UNLOCKED_PLAYERS_COUNT: 40` → controls exact count.
+- Ignored in production (`__DEV__ === false`).
 
 ---
 
 ## Data Model (Game State)
-Defined in `hooks/useGameState.ts`.
+Defined in `hooks/useGameState.ts`. Stored in `AsyncStorage` as JSON.
 
-`GameState` includes:
-- `appDataVersion`
-- `onboardingDone`
-- `favoriteTeam`
-- `playerProgress`
-- `lineup`
+`GameState`:
+- `appDataVersion: number` — bump to force migration/re-onboarding
+- `onboardingDone: boolean`
+- `favoriteTeam: string | null`
+- `playerProgress: Record<playerId, PlayerProgress>`
+  - `correctAnswers: number`
+  - `unlocked: boolean` (true when correctAnswers >= 4)
+  - `answeredIndices: number[]` (prevents double-counting same question)
+- `lineup: Record<LineupSlot, string | null>` — 11 slots (gk, cb1, cb2, lb, rb, cm1, cm2, cm3, lw, rw, st)
 - `seasonRounds: Round[]`
-- `currentRound`
+- `currentRound: number`
 - `leagueTable: LeagueRow[]`
-- `coins`
-- `matchStats`
+- `coins: number`
+- `matchStats: { wins, draws, losses }`
 
-`Round`:
-- `round`
-- `fixtures: Fixture[]`
+`Round`: `{ round: number, fixtures: Fixture[] }`
+`Fixture`: `{ home, away, played, homeGoals, awayGoals }`
+`LeagueRow`: `{ team, played, wins, draws, losses, gf, ga, gd, pts }`
 
-`Fixture`:
-- `home`, `away`, `played`, `homeGoals`, `awayGoals`
-
-`LeagueRow`:
-- `team`, `played`, `wins`, `draws`, `losses`, `gf`, `ga`, `gd`, `pts`
-
-Storage key:
-- `@football_stars_game`
+Storage key: `@football_stars_game`
 
 Versioning:
 - Current `appDataVersion`: `5`
-- On mismatch -> reset to default state.
+- On mismatch → reset to DEFAULT_STATE → force onboarding.
 
 ---
 
 ## Critical UX Constraints
 1. Wrong answers must never be counted as correct.
 2. Onboarding must not be skipped on fresh/invalid state.
-3. Stage B gate remains enforced at configured threshold.
+3. Stage B gate enforced at 21 unlocked players total.
 4. Stage B must enforce slot-role constraints and no duplicate assignment.
 5. Season progression must be sequential by rounds.
-6. All user-facing UI text should remain Hebrew-first.
+6. All user-facing UI text must remain Hebrew-first.
+7. Never make API calls for player data or quiz — everything is in the bundle.
 
 ---
 
@@ -140,9 +202,7 @@ For every functional change, agents MUST:
 
 ## Quick Validation Checklist for Agents
 - `npx tsc --noEmit` passes.
-- Flow: onboarding -> quiz unlock -> squad -> stage B.
-- Stage B:
-  - lineup can be completed with role constraints.
-  - playing a round updates fixtures and table.
-  - season reset works.
+- Flow: onboarding → quiz unlock → squad → stage B.
+- Stage B: lineup completes with role constraints, round plays, table updates, reset works.
+- No new `fetch()` / `axios` / API calls added for player data or images (bundle-only).
 - `.ai` synchronized with actual code.
