@@ -20,6 +20,92 @@ import { useGameState } from '../../hooks/useGameState';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+// ─── Hebrew → English translation map ─────────────────────────────────────────
+// Translates common Hebrew words before sending to FLUX (which doesn't understand Hebrew)
+
+const HE_TO_EN: [RegExp, string][] = [
+  // Player names
+  [/מסי/g, 'Lionel Messi'],
+  [/רונלדו/g, 'Cristiano Ronaldo'],
+  [/ניימר/g, 'Neymar'],
+  [/מבאפה/g, 'Kylian Mbappe'],
+  [/הלנד/g, 'Erling Haaland'],
+  [/בנזמה/g, 'Karim Benzema'],
+  [/לבנדובסקי/g, 'Robert Lewandowski'],
+  [/סאלח/g, 'Mohamed Salah'],
+  [/דה ברויינה/g, 'Kevin De Bruyne'],
+  [/פדרי/g, 'Pedri'],
+  [/ויניסיוס/g, 'Vinicius Jr'],
+  [/בלינגהאם/g, 'Jude Bellingham'],
+  [/זהבי/g, 'Eran Zahavi'],
+  [/אבאדה/g, 'Liel Abada'],
+  [/גלוך/g, 'Oscar Gloukh'],
+  [/סולומון/g, 'Manor Solomon'],
+  // Actions
+  [/מבקיע( שער)?/g, 'scoring a goal'],
+  [/חוגג/g, 'celebrating'],
+  [/רוקד/g, 'dancing'],
+  [/ריקוד/g, 'dancing'],
+  [/בלט/g, 'ballet'],
+  [/רץ/g, 'running'],
+  [/קופץ/g, 'jumping'],
+  [/מכה בכדור/g, 'kicking the ball'],
+  [/בועט/g, 'kicking'],
+  [/עושה פנדל/g, 'taking a penalty kick'],
+  [/שוחה/g, 'swimming'],
+  [/טס/g, 'flying'],
+  [/מעופף/g, 'flying'],
+  [/אוכל/g, 'eating'],
+  [/ישן/g, 'sleeping'],
+  [/מחייך/g, 'smiling'],
+  // Places & scenes
+  [/אצטדיון/g, 'stadium'],
+  [/מגרש/g, 'football pitch'],
+  [/חלל/g, 'outer space'],
+  [/ירח/g, 'moon'],
+  [/ים/g, 'ocean'],
+  [/מדבר/g, 'desert'],
+  [/ג\'ונגל/g, 'jungle'],
+  [/עיר/g, 'city'],
+  [/פריז/g, 'Paris'],
+  [/ברצלונה/g, 'Barcelona city'],
+  [/מדריד/g, 'Madrid'],
+  [/לונדון/g, 'London'],
+  // Objects & misc
+  [/כדור/g, 'football'],
+  [/גביע/g, 'trophy'],
+  [/גביע העולם/g, 'World Cup trophy'],
+  [/מדי קבוצה/g, 'football kit'],
+  [/גמד/g, 'dwarf'],
+  [/דינוזאור/g, 'dinosaur'],
+  [/אריה/g, 'lion'],
+  [/דרקון/g, 'dragon'],
+  [/רובוט/g, 'robot'],
+  [/על/g, 'on'],
+  [/עם/g, 'with'],
+  [/ב/g, 'in'],
+  [/ליד/g, 'next to'],
+  [/בלי/g, 'without'],
+];
+
+function translatePrompt(hebrewText: string): string {
+  let result = hebrewText;
+  for (const [pattern, replacement] of HE_TO_EN) {
+    result = result.replace(pattern, replacement);
+  }
+  return result.trim();
+}
+
+// ─── Quick prompt suggestions ──────────────────────────────────────────────────
+const SUGGESTIONS = [
+  { label: 'מסי מבקיע שער', english: 'Lionel Messi scoring a goal in a stadium' },
+  { label: 'רונלדו חוגג', english: 'Cristiano Ronaldo celebrating a goal, arms wide open' },
+  { label: 'הלנד בחלל', english: 'Erling Haaland playing football in outer space' },
+  { label: 'מסי רוקד בלט', english: 'Lionel Messi dancing ballet on a football pitch' },
+  { label: 'ניימר ג\'ונגל', english: 'Neymar dribbling through a jungle with a football' },
+  { label: 'מבאפה רץ מהר', english: 'Kylian Mbappe running at lightning speed with a football' },
+];
+
 const STYLES = [
   { id: 'photorealistic', label: 'ריאליסטי', emoji: '📸' },
   { id: 'anime', label: 'אנימה', emoji: '🎌' },
@@ -53,16 +139,37 @@ export default function GenerateScreen() {
     setImageUrl(null);
 
     try {
-      // Use Pollinations.ai for free AI generation
       const seed = Math.floor(Math.random() * 1000000);
-      const fullPrompt = `${prompt}, ${selectedStyle} style, high quality, professional football photography, 8k resolution`;
+      // Translate Hebrew → English so FLUX understands the prompt
+      const englishPrompt = translatePrompt(prompt);
+      const fullPrompt = `${englishPrompt}, ${selectedStyle} style, ultra high quality, dramatic lighting, 8k resolution`;
       const encodedPrompt = encodeURIComponent(fullPrompt);
       const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1792&seed=${seed}&model=flux&nologo=true`;
-      
+
+      // Actually fetch the image (with 30s timeout) to catch errors early
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          setError('השרת עמוס כרגע. המתן כמה שניות ונסה שוב 🔄');
+        } else {
+          setError(`שגיאה מהשרת (${res.status}). נסה שוב.`);
+        }
+        return;
+      }
+
       setImageUrl(url);
       incrementAIUsage();
-    } catch {
-      setError('שגיאה ביצירת התמונה. נסה שוב.');
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('לקח יותר מדי זמן. בדוק חיבור לאינטרנט ונסה שוב ⏱');
+      } else {
+        setError('שגיאה ביצירת התמונה. נסה שוב.');
+      }
     } finally {
       setLoading(false);
     }
@@ -141,6 +248,23 @@ export default function GenerateScreen() {
           />
         </View>
 
+        {/* Quick Suggestions */}
+        <View style={styles.suggestionsSection}>
+          <Text style={styles.label}>רעיונות מהירים 💡</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsRow}>
+            {SUGGESTIONS.map((s) => (
+              <TouchableOpacity
+                key={s.label}
+                style={styles.suggestionChip}
+                onPress={() => setPrompt(s.label)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.suggestionText}>{s.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Style Selector */}
         <View style={styles.styleSection}>
           <Text style={styles.label}>סגנון תמונה</Text>
@@ -214,6 +338,11 @@ export default function GenerateScreen() {
                 transition={600}
                 onLoadStart={() => setLoading(true)}
                 onLoadEnd={() => setLoading(false)}
+                onError={() => {
+                  setLoading(false);
+                  setError('התמונה לא נטענה. נסה שוב או שנה את הבקשה.');
+                  setImageUrl(null);
+                }}
               />
               {!loading && (
                 <View style={styles.previewActions}>
@@ -326,6 +455,27 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     textAlign: 'right',
     minHeight: 80,
+  },
+  suggestionsSection: {
+    marginBottom: Spacing.base,
+    paddingHorizontal: Spacing.base,
+  },
+  suggestionsRow: {
+    gap: Spacing.sm,
+    paddingBottom: 4,
+  },
+  suggestionChip: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.accent + '55',
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm + 4,
+    paddingVertical: 6,
+  },
+  suggestionText: {
+    color: Colors.accent,
+    fontSize: Fonts.sizes.xs,
+    fontWeight: '700',
   },
   styleSection: {
     marginBottom: Spacing.lg,
