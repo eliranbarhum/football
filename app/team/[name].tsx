@@ -102,8 +102,38 @@ export default function TeamScreen() {
           <View style={styles.infoCard}>
             <InfoRow icon="📅" label="שנת הקמה" value={String(team.founded)} />
             <InfoRow icon="🏷️" label="כינוי" value={team.nickname} />
+            <InfoRow icon="👨‍💼" label="מאמן נוכחי" value={team.manager} />
             <InfoRow icon="🏆" label="אליפויות מקומיות" value={String(team.leagueTitles)} />
             <InfoRow icon="🌍" label="גביעי אירופה" value={String(team.europeanTitles)} />
+          </View>
+        </View>
+
+        {/* Rival */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>⚔️ יריב מסורתי</Text>
+          <View style={styles.rivalCard}>
+            <Text style={styles.rivalText}>{team.rival}</Text>
+          </View>
+        </View>
+
+        {/* Legends */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🌟 אגדות הקבוצה</Text>
+          <View style={styles.infoCard}>
+            {team.legends.map((legend, i) => (
+              <View key={i} style={[styles.legendRow, i === team.legends.length - 1 && styles.legendRowLast]}>
+                <Text style={styles.legendStar}>⭐</Text>
+                <Text style={styles.legendText}>{legend}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Biggest Transfer */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💸 העברה הגדולה ביותר</Text>
+          <View style={styles.factCard}>
+            <Text style={styles.factText}>{team.biggestTransfer}</Text>
           </View>
         </View>
 
@@ -311,6 +341,33 @@ const styles = StyleSheet.create({
   },
   jerseyNum: { color: Colors.textMuted, fontSize: Fonts.sizes.xs, fontWeight: '800' },
   playerArrow: { color: Colors.accent, fontSize: 20, fontWeight: '700' },
+
+  rivalCard: {
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.base,
+  },
+  rivalText: {
+    color: Colors.text,
+    fontSize: Fonts.sizes.base,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.base,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: Spacing.sm,
+  },
+  legendRowLast: { borderBottomWidth: 0 },
+  legendStar: { fontSize: 16 },
+  legendText: { color: Colors.text, fontSize: Fonts.sizes.sm, fontWeight: '600', flex: 1 },
 
   notFound: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   notFoundText: { color: Colors.textMuted, fontSize: Fonts.sizes.lg },
