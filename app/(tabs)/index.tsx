@@ -30,21 +30,28 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // קבוצות להציג בדף הבית
 const TEAM_GROUPS = [
-  { name: 'Real Madrid',       searchName: 'Real Madrid',        color: '#FFFFFF', secondary: '#FFD700' },
-  { name: 'Barcelona',         searchName: 'FC Barcelona',       color: '#004D98', secondary: '#A50044' },
-  { name: 'Man City',          searchName: 'Manchester City',    color: '#6CABDD', secondary: '#FFFFFF' },
-  { name: 'Liverpool',         searchName: 'Liverpool',          color: '#C8102E', secondary: '#00B2A9' },
-  { name: 'Arsenal',           searchName: 'Arsenal',            color: '#EF0107', secondary: '#FFFFFF' },
-  { name: 'Man United',        searchName: 'Manchester United',  color: '#DA020E', secondary: '#FFE500' },
-  { name: 'Bayern',            searchName: 'Bayern Munich',      color: '#DC052D', secondary: '#0066B2' },
-  { name: 'PSG',               searchName: 'Paris Saint-Germain',color: '#004170', secondary: '#DA291C' },
-  { name: 'Inter Miami',       searchName: 'Inter Miami',        color: '#FF007F', secondary: '#000000' },
-  // ===== ישראל =====
-  { name: 'מכבי ת״א',          searchName: 'Maccabi Tel Aviv',   color: '#FFD700', secondary: '#003580' },
-  { name: 'ביתר י-ם',          searchName: 'Beitar Jerusalem',   color: '#FFD700', secondary: '#000000' },
-  { name: 'מכבי חיפה',         searchName: 'Maccabi Haifa',      color: '#006600', secondary: '#FFFFFF' },
-  { name: 'הפועל ב״ש',         searchName: 'Hapoel Beer Sheva',  color: '#CC0000', secondary: '#FFFFFF' },
+  { name: 'Real Madrid',  teamFilter: 'Real Madrid',       color: '#FFFFFF', secondary: '#FFD700', badgeUrl: 'https://crests.football-data.org/86.svg' },
+  { name: 'Barcelona',    teamFilter: 'Barcelona',          color: '#004D98', secondary: '#A50044', badgeUrl: 'https://crests.football-data.org/81.svg' },
+  { name: 'Man City',     teamFilter: 'Manchester City',    color: '#6CABDD', secondary: '#FFFFFF', badgeUrl: 'https://crests.football-data.org/65.svg' },
+  { name: 'Liverpool',    teamFilter: 'Liverpool',          color: '#C8102E', secondary: '#00B2A9', badgeUrl: 'https://crests.football-data.org/64.svg' },
+  { name: 'Arsenal',      teamFilter: 'Arsenal',            color: '#EF0107', secondary: '#FFFFFF', badgeUrl: 'https://crests.football-data.org/57.svg' },
+  { name: 'Man United',   teamFilter: 'Manchester United',  color: '#DA020E', secondary: '#FFE500', badgeUrl: 'https://crests.football-data.org/66.svg' },
+  { name: 'Chelsea',      teamFilter: 'Chelsea',            color: '#034694', secondary: '#FFFFFF', badgeUrl: 'https://crests.football-data.org/61.svg' },
+  { name: 'Tottenham',    teamFilter: 'Tottenham',          color: '#132257', secondary: '#FFFFFF', badgeUrl: 'https://crests.football-data.org/73.svg' },
+  { name: 'Bayern',       teamFilter: 'Bayern Munich',      color: '#DC052D', secondary: '#0066B2', badgeUrl: 'https://crests.football-data.org/5.svg' },
+  { name: 'Leverkusen',   teamFilter: 'Bayer Leverkusen',   color: '#E32221', secondary: '#000000', badgeUrl: 'https://crests.football-data.org/3.svg' },
+  { name: 'PSG',          teamFilter: 'PSG',                color: '#004170', secondary: '#DA291C', badgeUrl: 'https://crests.football-data.org/524.svg' },
+  { name: 'Inter Milan',  teamFilter: 'Inter Milan',        color: '#010E80', secondary: '#000000', badgeUrl: 'https://crests.football-data.org/108.svg' },
+  { name: 'AC Milan',     teamFilter: 'AC Milan',           color: '#FB090B', secondary: '#000000', badgeUrl: 'https://crests.football-data.org/98.svg' },
+  { name: 'Juventus',     teamFilter: 'Juventus',           color: '#000000', secondary: '#FFFFFF', badgeUrl: 'https://crests.football-data.org/109.svg' },
+  // Israeli teams - use TheSportsDB API with delay
+  { name: 'מכבי ת״א',    teamFilter: 'Maccabi Tel Aviv',   color: '#FFD700', secondary: '#003580', badgeUrl: null as string | null, searchName: 'Maccabi Tel Aviv' },
+  { name: 'ביתר י-ם',    teamFilter: 'Beitar Jerusalem',   color: '#FFD700', secondary: '#000000', badgeUrl: null as string | null, searchName: 'Beitar Jerusalem' },
+  { name: 'מכבי חיפה',   teamFilter: 'Maccabi Haifa',      color: '#006600', secondary: '#FFFFFF', badgeUrl: null as string | null, searchName: 'Maccabi Haifa' },
+  { name: 'הפועל ב״ש',   teamFilter: 'Hapoel Beer Sheva',  color: '#CC0000', secondary: '#FFFFFF', badgeUrl: null as string | null, searchName: 'Hapoel Beer Sheva' },
 ];
+
+type TeamGroup = typeof TEAM_GROUPS[number];
 
 function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) {
   return (
@@ -60,57 +67,64 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => vo
 }
 
 function TeamCard({
-  name,
-  searchName,
-  color,
-  secondary,
+  item,
   onPress,
+  apiDelay,
 }: {
-  name: string;
-  searchName: string;
-  color: string;
-  secondary: string;
+  item: TeamGroup;
   onPress: () => void;
+  apiDelay: number;
 }) {
-  const [badgeUrl, setBadgeUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [fetchedBadgeUrl, setFetchedBadgeUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(item.badgeUrl === null);
 
   useEffect(() => {
+    if (item.badgeUrl !== null) return; // has hardcoded URL, no fetch needed
     let cancelled = false;
-    getTeamBadge(searchName).then((url) => {
-      if (!cancelled) {
-        setBadgeUrl(url);
-        setLoading(false);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [searchName]);
+    const searchName = (item as { searchName?: string }).searchName ?? item.name;
+
+    const timer = setTimeout(() => {
+      getTeamBadge(searchName).then((url) => {
+        if (!cancelled) {
+          setFetchedBadgeUrl(url);
+          setLoading(false);
+        }
+      });
+    }, apiDelay);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [item, apiDelay]);
+
+  const resolvedBadgeUrl = item.badgeUrl ?? fetchedBadgeUrl;
 
   return (
     <TouchableOpacity onPress={onPress} style={styles.teamCard} activeOpacity={0.8}>
       <LinearGradient
-        colors={[color + '33', secondary + '22']}
+        colors={[item.color + '33', item.secondary + '22']}
         style={styles.teamGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         {loading ? (
-          <ActivityIndicator size="small" color={color} />
-        ) : badgeUrl ? (
+          <ActivityIndicator size="small" color={item.color} />
+        ) : resolvedBadgeUrl ? (
           <Image
-            source={{ uri: badgeUrl }}
+            source={{ uri: resolvedBadgeUrl }}
             style={styles.teamBadge}
             contentFit="contain"
             transition={300}
           />
         ) : (
           // Fallback: ראשי תיבות
-          <Text style={[styles.teamInitial, { color }]}>
-            {name.slice(0, 2).toUpperCase()}
+          <Text style={[styles.teamInitial, { color: item.color }]}>
+            {item.name.slice(0, 2).toUpperCase()}
           </Text>
         )}
       </LinearGradient>
-      <Text style={styles.teamName} numberOfLines={1}>{name}</Text>
+      <Text style={styles.teamName} numberOfLines={1}>{item.name}</Text>
     </TouchableOpacity>
   );
 }
@@ -130,9 +144,19 @@ export default function HomeScreen() {
     router.push(`/wallpaper/${player.id}`);
   };
 
-  const handleTeamPress = (teamName: string) => {
-    router.push({ pathname: '/(tabs)/gallery', params: { team: teamName } });
+  const handleTeamPress = (teamFilter: string) => {
+    router.push({ pathname: '/(tabs)/gallery', params: { team: teamFilter } });
   };
+
+  // Pre-compute staggered delays for Israeli teams (those with badgeUrl === null)
+  const teamDelays = React.useMemo(() => {
+    const delays: Record<string, number> = {};
+    let israeliIndex = 0;
+    for (const team of TEAM_GROUPS) {
+      delays[team.name] = team.badgeUrl === null ? israeliIndex++ * 300 : 0;
+    }
+    return delays;
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -218,11 +242,9 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.name}
           renderItem={({ item }) => (
             <TeamCard
-              name={item.name}
-              searchName={item.searchName}
-              color={item.color}
-              secondary={item.secondary}
-              onPress={() => handleTeamPress(item.name)}
+              item={item}
+              onPress={() => handleTeamPress(item.teamFilter)}
+              apiDelay={teamDelays[item.name] ?? 0}
             />
           )}
           ItemSeparatorComponent={() => <View style={{ width: Spacing.sm }} />}

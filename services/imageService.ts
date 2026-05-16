@@ -7,90 +7,53 @@ export async function checkPermissions(): Promise<boolean> {
   return status === 'granted';
 }
 
-export async function downloadImage(
-  imageUrl: string,
-  playerName: string
-): Promise<boolean> {
+export async function downloadImage(imageUrl: string, playerName: string): Promise<boolean> {
   try {
-    const hasPermission = await checkPermissions();
-    if (!hasPermission) {
-      console.warn('Media library permission denied');
-      return false;
-    }
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') return false;
 
-    const filename = `football_star_${playerName.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
-    const fileUri = FileSystem.cacheDirectory + filename;
+    const sanitized = playerName.replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `football_${sanitized}_${Date.now()}.jpg`;
+    const fileUri = `${FileSystem.documentDirectory}${filename}`;
 
-    const downloadResult = await FileSystem.downloadAsync(imageUrl, fileUri);
+    const result = await FileSystem.downloadAsync(imageUrl, fileUri);
+    if (!result || result.status !== 200) return false;
 
-    if (downloadResult.status !== 200) {
-      console.warn('Download failed with status:', downloadResult.status);
-      return false;
-    }
+    await MediaLibrary.createAssetAsync(result.uri);
 
-    const asset = await MediaLibrary.createAssetAsync(downloadResult.uri);
-
-    // Try to save into a Football Stars album
-    try {
-      let album = await MediaLibrary.getAlbumAsync('Football Stars');
-      if (album === null) {
-        album = await MediaLibrary.createAlbumAsync('Football Stars', asset, false);
-      } else {
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
-      }
-    } catch {
-      // Album creation may fail on some devices — the asset is still saved to the gallery
-    }
+    // Clean up the file from documentDirectory after saving to library
+    try { await FileSystem.deleteAsync(result.uri, { idempotent: true }); } catch {}
 
     return true;
-  } catch (error) {
-    console.error('downloadImage error:', error);
+  } catch (e) {
+    console.error('downloadImage error:', e);
     return false;
   }
 }
 
 export async function shareImage(imageUrl: string, playerName?: string): Promise<void> {
   try {
-    const filename = `football_star_${(playerName ?? 'player').replace(/\s+/g, '_')}_${Date.now()}.jpg`;
-    const fileUri = FileSystem.cacheDirectory + filename;
+    const sanitized = (playerName ?? 'player').replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `football_${sanitized}_${Date.now()}.jpg`;
+    const fileUri = `${FileSystem.cacheDirectory}${filename}`;
 
-    const downloadResult = await FileSystem.downloadAsync(imageUrl, fileUri);
-
-    if (downloadResult.status !== 200) {
-      throw new Error('Failed to download image for sharing');
-    }
+    const result = await FileSystem.downloadAsync(imageUrl, fileUri);
+    if (!result || result.status !== 200) throw new Error('Download failed');
 
     const canShare = await Sharing.isAvailableAsync();
-    if (!canShare) {
-      throw new Error('Sharing is not available on this device');
-    }
+    if (!canShare) throw new Error('Sharing unavailable');
 
-    await Sharing.shareAsync(downloadResult.uri, {
+    await Sharing.shareAsync(result.uri, {
       mimeType: 'image/jpeg',
       dialogTitle: `שתף תמונה של ${playerName ?? 'שחקן'}`,
-      UTI: 'public.jpeg',
     });
-  } catch (error) {
-    console.error('shareImage error:', error);
-    throw error;
+  } catch (e) {
+    console.error('shareImage error:', e);
+    throw e;
   }
 }
 
 export async function setAsWallpaper(imageUrl: string, playerName?: string): Promise<boolean> {
-  try {
-    const hasPermission = await checkPermissions();
-    if (!hasPermission) return false;
-
-    const filename = `wallpaper_${(playerName ?? 'player').replace(/\s+/g, '_')}_${Date.now()}.jpg`;
-    const fileUri = FileSystem.cacheDirectory + filename;
-
-    const downloadResult = await FileSystem.downloadAsync(imageUrl, fileUri);
-    if (downloadResult.status !== 200) return false;
-
-    await MediaLibrary.createAssetAsync(downloadResult.uri);
-    return true;
-  } catch (error) {
-    console.error('setAsWallpaper error:', error);
-    return false;
-  }
+  // On iOS/Android: save to gallery, user sets wallpaper manually from gallery
+  return downloadImage(imageUrl, playerName ?? 'wallpaper');
 }

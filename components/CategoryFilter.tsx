@@ -16,37 +16,44 @@ interface CategoryFilterProps {
 
 export default function CategoryFilter({ selected, onSelect }: CategoryFilterProps) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.container}
-    >
-      {LEAGUES.map((league) => {
-        const isActive = selected === league.id;
-        return (
-          <TouchableOpacity
-            key={league.id}
-            onPress={() => onSelect(league.id)}
-            style={[styles.chip, isActive && styles.chipActive]}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.chipIcon}>{league.icon}</Text>
-            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-              {league.name}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
+    <View style={styles.wrapper}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.container}
+      >
+        {LEAGUES.map((league) => {
+          const isActive = selected === league.id;
+          return (
+            <TouchableOpacity
+              key={league.id}
+              onPress={() => onSelect(league.id)}
+              style={[styles.chip, isActive && styles.chipActive]}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.chipIcon}>{league.icon}</Text>
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                {league.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    height: 56,
+    justifyContent: 'center',
+  },
   container: {
     paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
     gap: Spacing.sm,
     flexDirection: 'row',
+    alignItems: 'center',
   },
   chip: {
     flexDirection: 'row',
@@ -54,21 +61,22 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderRadius: BorderRadius.full,
     paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.xs + 2,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: Colors.border,
     gap: 4,
+    minWidth: 72,
   },
   chipActive: {
     backgroundColor: Colors.accent,
     borderColor: Colors.accent,
   },
   chipIcon: {
-    fontSize: 14,
+    fontSize: 16,
   },
   chipText: {
     color: Colors.textMuted,
-    fontSize: Fonts.sizes.sm,
+    fontSize: 13,
     fontWeight: '600',
   },
   chipTextActive: {

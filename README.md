@@ -217,6 +217,33 @@ football/
 
 ---
 
+## Phase 2: Adding more content (images)
+
+### Option A: Supabase image store (recommended)
+1. In Supabase: Storage → Create bucket "player-images" (public)
+2. Upload player images manually (JPG, 800x1200px recommended)
+3. Run the SQL to create the wallpapers table:
+   ```sql
+   create table wallpapers (
+     id uuid default gen_random_uuid() primary key,
+     player_id text not null,
+     image_url text not null,
+     style text default 'photo',
+     is_featured boolean default false,
+     created_at timestamptz default now()
+   );
+   ```
+4. Insert rows pointing to your uploaded images
+5. The app will automatically show these images
+
+### Option B: TheSportsDB Patreon ($2/month)
+Upgrade for higher rate limits and HD images
+
+### Option C: AI generation (coming soon)
+The /generate tab will create AI images via Hugging Face
+
+---
+
 ## רישיון
 
 MIT — לשימוש חינמי
