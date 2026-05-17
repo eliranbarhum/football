@@ -677,7 +677,7 @@ export const TEAMS: TeamInfo[] = [
     biggestTransfer: '💸 מכרו: שרן ייני לבנפיקה ב-5 מ\' יורו (2020)',
     color: '#FFD700',
     secondary: '#003580',
-    badgeUrl: null,
+    badgeUrl: 'https://upload.wikimedia.org/wikipedia/en/d/d3/Maccabi_Tel_Aviv_football.png',
     funFacts: [
       '⭐ 24 אליפויות ישראל — הכי הרבה בהיסטוריה!',
       '🏀 גם קבוצת הכדורסל מכבי תל אביב היא אלופת אירופה — עיר אחת, שתי אגדות',
@@ -702,7 +702,7 @@ export const TEAMS: TeamInfo[] = [
     biggestTransfer: '💸 מכרו: עומר עציל לאנדרלכט ב-2 מ\' יורו (2021)',
     color: '#FFD700',
     secondary: '#000000',
-    badgeUrl: null,
+    badgeUrl: 'https://upload.wikimedia.org/wikipedia/en/7/7a/Beitar_Jerusalem_FC.png',
     funFacts: [
       '👑 נקראת "המלך" — אוהדים קיצוניים ונאמנים שמלאו את טדי בכל גשם',
       '🏟️ אצטדיון טדי נקרא על שם ראש העיר האגדי טדי קולק',
@@ -727,7 +727,7 @@ export const TEAMS: TeamInfo[] = [
     biggestTransfer: '💸 מכרו: ניר ביטון לסלטיק ב-3 מ\' יורו (2013)',
     color: '#006600',
     secondary: '#FFFFFF',
-    badgeUrl: null,
+    badgeUrl: 'https://upload.wikimedia.org/wikipedia/en/6/6e/Maccabi_Haifa_FC.png',
     funFacts: [
       '🌍 הפתיעו את אירופה ב-2022 — סיימו ראשונים בבית בליגת האלופות לפני יובנטוס!',
       '🟢 15 אליפויות ישראל — שניים אחרי מכבי תל אביב',
@@ -752,7 +752,7 @@ export const TEAMS: TeamInfo[] = [
     biggestTransfer: '💸 קנו: פרייזר פורסיית\' מוולורהמפטון ב-1 מ\' יורו (2019)',
     color: '#CC0000',
     secondary: '#FFFFFF',
-    badgeUrl: null,
+    badgeUrl: 'https://upload.wikimedia.org/wikipedia/en/5/53/Hapoel_Beer-Sheva_FC.png',
     funFacts: [
       '🌵 4 אליפויות ישראל ברצף (2015-2018) — הישג שאיש לא חזר עליו',
       '🌍 הגיעו לשלב הבתים של ליגת אירופה — הישג היסטורי לכדורגל ישראלי',
