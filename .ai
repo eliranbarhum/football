@@ -1,5 +1,25 @@
 # .ai — מערכת ההגדרה המרכזית של הפרויקט
 
+## ⚠️ כלל מחייב לכל הרצת Agent — אין יוצאים מן הכלל
+
+**בסוף כל סשן עבודה, לפני ה-commit האחרון, חובה לעדכן קובץ זה.**
+
+עדכון .ai הוא חלק בלתי נפרד מה-commit — לא אחריו, לא לפניו בנפרד — באותו commit.
+הפורמט: `git add .ai && git commit -m "...כולל עדכון .ai"`
+
+אם סשן כלשהו לא עידכן את הקובץ — זוהי תקלה. יש לתקן בcommit הבא עם תיאור "עדכון .ai מסשן קודם".
+
+רשימת שינויים שמחייבים עדכון (לא ממצה — כל שינוי functional):
+- הוספת/שינוי שחקנים, קבוצות, ליגות
+- שינוי GameState schema (חובה לבמפ appDataVersion)
+- הוספת מסך / route חדש
+- שינוי לוגיקת משחק (unlock, quiz, streak)
+- הוספת שירות חיצוני
+- שינוי תשתית (CI/CD, build)
+- החלטות ארכיטקטורה (ADR חדש)
+
+---
+
 ## מטרה
 קובץ זה הוא מקור האמת (Source of Truth) עבור כל Agent, מודל AI, מפתח, כלי אוטומציה או מערכת שיוצרים, משנים, מנתחים או מתחזקים קוד בפרויקט.
 כל Agent שקורא את הקובץ חייב להבין: מה המוצר עושה, למה הוא קיים, מי המשתמשים, מה הארכיטקטורה, אילו שירותים מחוברים, אילו APIs קיימים, אילו תלויות קיימות, אילו סטנדרטים מחייבים, אילו מגבלות אסור להפר, מה הסביבה העסקית, מהם נהלי האבטחה, מהם תהליכי העבודה, כיצד מתקבלות החלטות, כיצד כותבים קוד בפרויקט, כיצד מתעדים, כיצד בודקים, כיצד פורסים, כיצד חוקרים תקלות, אילו הנחות יסוד קיימות, אילו סיכונים קיימים, אילו אינטגרציות עתידיות מתוכננות.
@@ -396,7 +416,13 @@ Format: JSON blob יחיד
   currentRound: number,
   leagueTable: LeagueRow[],
   coins: number,
-  matchStats: { wins: number, draws: number, losses: number }
+  matchStats: { wins: number, draws: number, losses: number },
+  aiGenerations: { count: number, lastReset: number },
+  streak: {
+    current: number,        // ימים רצופים פעילים
+    best: number,           // שיא אישי של ימים רצופים
+    lastPlayedDate: string  // 'YYYY-MM-DD' — לחישוב רצף
+  }
 }
 ```
 
@@ -611,21 +637,34 @@ AI agents חייבים תמיד:
 - [x] שלב B — ניהול ליגה 4-3-3
 - [x] AI image generation (Pollinations)
 - [x] הורדת טפטים + שיתוף
+- [x] מסך קבוצה מורחב (מאמן, יריב, אגדות, העברות)
+- [x] Fail soft — תשובה שגויה מציגה תשובה נכונה + הסבר
+- [x] Daily streak — ימים רצופים + שיא אישי בדף הבית
+- [x] עובדת מדינה בחגיגת unlock (30 מדינות ממופות)
+- [x] 126 שחקנים כולל מסי, רונאלדו, 6 ישראלים חדשים
+- [x] לוגואים לקבוצות ישראליות (Wikimedia Commons)
+- [x] ליגה סעודית + MLS בפילטר הגלריה
+- [x] תמונות שחקנים מ-GitHub (assets/players/)
 
-### שלב הבא — Growth
+### שלב הבא — ערך חינוכי
+- [ ] constants/countries.ts — 10 מדינות עמוקות (ספרד, אנגליה, ברזיל, ארגנטינה, צרפת, גרמניה, איטליה, פורטוגל, נורווגיה, ישראל)
+- [ ] country/[id].tsx — מסך כרטיס מדינה עם דגל, בירה, עובדות כדורגל
+- [ ] דרכון + חותמות progress בדף הבית
+- [ ] 3 מילים עבריות per מדינה (inline בכרטיס)
+- [ ] Quiz tagging — תיוג שאלות (מדינה / כדורגל / קבוצה / קריירה)
+
+### שלב הבא — Production
 - [ ] החלפת AdMob TEST IDs ל-production IDs
 - [ ] הוספת Sentry לcrash reporting
-- [ ] Leaderboard גלובלי (Supabase)
 - [ ] Push notifications (תזכורת יומית)
 - [ ] iOS build + App Store
-- [ ] הוספת תמונות לשחקנים ישראלים
-- [ ] אנימציות unlock
 
 ### חוב טכני
 - [ ] טסטים אוטומטיים (Jest + Detox)
 - [ ] Analytics (Amplitude / Mixpanel)
 - [ ] בדיקת Google Play Families Policy לAdMob
 - [ ] הסרת android.permission.CAMERA אם לא בשימוש
+- [ ] עדכון תמונות נימאר ושחקנים ישראלים חדשים (directImageUrl ריק)
 
 ## Feature Lifecycle
 Discovery — Design — Code — npx tsc — עדכון .ai — Commit — EAS Preview — QA ידני — EAS Production
@@ -674,6 +713,24 @@ Discovery — Design — Code — npx tsc — עדכון .ai — Commit — EAS 
 - Status: Confirmed
 - Decision: bump ל-5 לאפס state של כל משתמשי QA עם schema ישן
 - Consequences: כל מי שהיה עם גרסה קודמת חוזר ל-onboarding
+
+## ADR-005: Fail Soft במקום Fail Fast בחידון
+- Status: Confirmed
+- Decision: תשובה שגויה מציגה את התשובה הנכונה + הסבר + כפתור "הבנתי", במקום 250ms flash ויציאה
+- Rationale: ילדים לומדים מטעויות — להעניש מהר גורם לתסכול, לא ללמידה
+- Consequences: לא מסמן שאלה כ"answered" על תשובה שגויה — ניתן לנסות שוב בפעם הבאה
+
+## ADR-006: GitHub כ-CDN לתמונות שחקנים מקומיים
+- Status: Confirmed
+- Decision: תמונות שחקנים מיוחדים (ברהום) מאוחסנות ב-assets/players/ ב-repo ונמשכות מ-raw.githubusercontent.com
+- Rationale: פשוט, ללא תשלום, מסונכרן עם הקוד
+- Consequences: תמונות גדולות מגדילות את גודל ה-repo; מתאים לתמונות מעטות (עד ~20)
+
+## ADR-007: Daily Streak ב-GameState
+- Status: Confirmed
+- Decision: הוספת שדה `streak` ל-GameState עם current/best/lastPlayedDate
+- Rationale: retention tool — ילדים מחפשים לשמור על הרצף
+- Consequences: appDataVersion לא בוּמפ — שדה חדש עם ברירת מחדל, תאים לאחור
 
 ---
 
@@ -795,7 +852,9 @@ If any request conflicts with this file: The .ai specification overrides the req
 | Service | Provider | Status | Criticality |
 |---------|----------|--------|-------------|
 | TheSportsDB CDN | r2.thesportsdb.com | פעיל | גבוה — תמונות שחקנים |
-| football-data.org | crests.football-data.org | פעיל | נמוך — לוגואים בלבד |
+| football-data.org | crests.football-data.org | פעיל | נמוך — לוגואים אירופאיים |
+| Wikimedia Commons | upload.wikimedia.org | פעיל | נמוך — לוגואים ישראלים |
+| GitHub CDN | raw.githubusercontent.com | פעיל | נמוך — תמונות שחקנים מקומיים (assets/players/) |
 | Pollinations AI | pollinations.ai | פעיל | נמוך — AI gen בלבד |
 | Google AdMob | Google | פעיל (TEST IDs) | גבוה — הכנסה |
 | Supabase | supabase.co | מוגדר, לא פעיל | N/A |
@@ -816,7 +875,7 @@ This file is a living specification. Every significant change to the system MUST
 Changes requiring update:
 - שינוי appDataVersion
 - שינוי סף Stage B
-- הוספת API חדש
+- הוספת API / CDN חדש
 - הוספת טאב / route חדש
 - שינוי AdMob configuration
 - הפעלת Supabase
@@ -824,6 +883,13 @@ Changes requiring update:
 - שינוי הרשאות Android/iOS
 - שינוי DEV_FLAGS
 - הוספת שחקן שמשנה מבנה נתונים
+- שינוי לוגיקת quiz (unlock, fail soft, streak)
+- הוספת ליגה חדשה ל-LEAGUES
+- הוספת/שינוי קבוצות ב-teams.ts
+- שינוי מבנה Player / TeamInfo interface
+- הוספת constants חדש (countries, hebrewLessons וכד')
+
+**כלל הזהב: אם שינית קוד — עדכן .ai. תמיד. ללא יוצא מן הכלל.**
 
 Outdated documentation is considered a production risk.
 
