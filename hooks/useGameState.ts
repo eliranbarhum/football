@@ -372,6 +372,11 @@ export function useGameState() {
   }, [state, save]);
 
   const getUnlockedPlayers = useCallback(() => {
+    // שחקנים עם alwaysUnlocked פתוחים תמיד — בכל מצב
+    const alwaysUnlockedIds = PLAYERS
+      .filter((p) => p.alwaysUnlocked)
+      .map((p) => p.id);
+
     if (__DEV__ && DEV_FLAGS.UNLOCK_21_PLAYERS_FOR_TESTS) {
       const wanted = Math.max(40, DEV_FLAGS.QA_UNLOCKED_PLAYERS_COUNT);
       const byRole = [
@@ -381,12 +386,15 @@ export function useGameState() {
         ...PLAYERS.filter((p) => p.position === 'Forward'),
       ];
       const unique = Array.from(new Map(byRole.map((p) => [p.id, p])).values());
-      return unique.slice(0, wanted).map((p) => p.id);
+      const devIds = unique.slice(0, wanted).map((p) => p.id);
+      return Array.from(new Set([...devIds, ...alwaysUnlockedIds]));
     }
 
-    return Object.entries(state.playerProgress)
+    const progressIds = Object.entries(state.playerProgress)
       .filter(([, p]) => p.unlocked)
       .map(([id]) => id);
+
+    return Array.from(new Set([...progressIds, ...alwaysUnlockedIds]));
   }, [state.playerProgress]);
 
   const getPlayerProgress = useCallback((playerId: string): PlayerProgress => {

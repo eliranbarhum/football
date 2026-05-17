@@ -19,6 +19,7 @@ export interface Player {
   searchName: string;
   isFeatured: boolean;
   isPopular: boolean;
+  alwaysUnlocked?: boolean;   // שחקנים מיוחדים — פתוחים תמיד (ללא צורך בחידון)
   directImageUrl: string;
   // Educational fields
   birthDate: string;
@@ -2066,7 +2067,7 @@ export const PLAYERS: Player[] = [
     team: 'Jerusalem Stars FC', teamShort: 'JRS', nationality: 'Israel',
     position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 10,
     teamColor: '#A50044', teamColorSecondary: '#004D98',
-    searchName: 'Harel Barhum הראל ברהום', isFeatured: true, isPopular: true,
+    searchName: 'Harel Barhum הראל ברהום', isFeatured: true, isPopular: true, alwaysUnlocked: true,
     directImageUrl: 'https://raw.githubusercontent.com/eliranbarhum/football/main/assets/players/harel.jpeg',
     birthDate: '18 אפריל 2019',
     birthPlace: 'ירושלים, ישראל',
@@ -2086,7 +2087,7 @@ export const PLAYERS: Player[] = [
     team: 'Jerusalem Stars FC', teamShort: 'JRS', nationality: 'Israel',
     position: 'Forward', league: 'Israeli Premier League', jerseyNumber: 10,
     teamColor: '#0038B8', teamColorSecondary: '#FFFFFF',
-    searchName: 'Maor Barhum מאור ברהום', isFeatured: true, isPopular: true,
+    searchName: 'Maor Barhum מאור ברהום', isFeatured: true, isPopular: true, alwaysUnlocked: true,
     directImageUrl: 'https://raw.githubusercontent.com/eliranbarhum/football/main/assets/players/maor.jpeg',
     birthDate: '2 פברואר 2017',
     birthPlace: 'ירושלים, ישראל',
@@ -2446,9 +2447,9 @@ export const LEAGUES = [
   { id: 'Bundesliga', name: 'בונדסליגה', icon: '🇩🇪' },
   { id: 'Serie A', name: 'סריה א', icon: '🇮🇹' },
   { id: 'Ligue 1', name: 'ליג 1', icon: '🇫🇷' },
-  { id: 'Israeli Premier League', name: '🇮🇱 ליגת העל', icon: '🇮🇱' },
-  { id: 'Saudi Pro League', name: '🇸🇦 ליגה סעודית', icon: '🇸🇦' },
-  { id: 'MLS', name: '🇺🇸 MLS', icon: '🇺🇸' },
+  { id: 'Israeli Premier League', name: 'ליגת העל', icon: '🇮🇱' },
+  { id: 'Saudi Pro League', name: 'ליגה סעודית', icon: '🇸🇦' },
+  { id: 'MLS', name: 'MLS', icon: '🇺🇸' },
 ];
 
 export const FEATURED_PLAYERS = PLAYERS.filter((p) => p.isFeatured);
