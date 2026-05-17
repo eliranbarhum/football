@@ -17,6 +17,39 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Fonts, BorderRadius } from '../../constants/theme';
 import { getPlayerById } from '../../constants/players';
 import { downloadImage, shareImage, setAsWallpaper } from '../../services/imageService';
+
+// Map nationality → flag emoji + one-liner
+const COUNTRY_DATA: Record<string, { flag: string; fact: string }> = {
+  France:      { flag: '🇫🇷', fact: 'צרפת זכתה בגביע העולם פעמיים — 1998 ו-2018!' },
+  Brazil:      { flag: '🇧🇷', fact: 'ברזיל היא המדינה עם הכי הרבה גביעי עולם — 5 פעמים!' },
+  Argentina:   { flag: '🇦🇷', fact: 'ארגנטינה זכתה בגביע העולם 2022 בקטאר!' },
+  Portugal:    { flag: '🇵🇹', fact: 'פורטוגל זכתה ביורו 2016 — ורונאלדו הוביל אותם!' },
+  England:     { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', fact: 'אנגליה המציאה את כדורגל המודרני ב-1863!' },
+  Spain:       { flag: '🇪🇸', fact: 'ספרד זכתה ב-3 גביעים רצופים: יורו 2008, מונדיאל 2010, יורו 2012!' },
+  Germany:     { flag: '🇩🇪', fact: 'גרמניה זכתה בגביע העולם 4 פעמים!' },
+  Italy:       { flag: '🇮🇹', fact: 'איטליה ידועה בסגנון המשחק "קטנאצ\'ו" — הגנה מוצקה!' },
+  Netherlands: { flag: '🇳🇱', fact: 'הולנד המציאה את "כדורגל הטוטאלי" עם יוהאן קרויף!' },
+  Belgium:     { flag: '🇧🇪', fact: 'בלגיה הגיעה למקום ה-3 בגביע העולם 2018!' },
+  Norway:      { flag: '🇳🇴', fact: 'נורווגיה ידועה בחורפים עם ספורט שלג — אך גם מגדלת כוכבי כדורגל!' },
+  Croatia:     { flag: '🇭🇷', fact: 'קרואטיה עם 4 מיליון תושבים הגיעה לגמר גביע העולם 2018!' },
+  Poland:      { flag: '🇵🇱', fact: 'פולין ידועה בלבנדובסקי — אחד החלוצים הטובים בעולם!' },
+  Serbia:      { flag: '🇷🇸', fact: 'סרביה מגדלת בעקביות שחקנים מוכשרים לליגות אירופה!' },
+  Denmark:     { flag: '🇩🇰', fact: 'דנמרק זכתה ביורו 1992 — הפתעה ענקית!' },
+  Sweden:      { flag: '🇸🇪', fact: 'שוודיה הכניסה לעולם את זלאטן איברהימוביץ\'!' },
+  Austria:     { flag: '🇦🇹', fact: 'אוסטריה ידועה כמדינה שנותנת הרבה שחקנים לבונדסליגה!' },
+  Switzerland: { flag: '🇨🇭', fact: 'שווייץ ידועה בניטרליות — אבל בכדורגל היא לא ניטרלית!' },
+  Israel:      { flag: '🇮🇱', fact: 'ישראל מגדלת שחקנים שמשחקים בליגות הגדולות באירופה!' },
+  Morocco:     { flag: '🇲🇦', fact: 'מרוקו הגיעה להיסטורית לחצי גמר גביע העולם 2022!' },
+  Senegal:     { flag: '🇸🇳', fact: 'סנגל זכתה בגביע אפריקה 2022!' },
+  Egypt:       { flag: '🇪🇬', fact: 'מצרים זכתה 7 פעמים בגביע אפריקה — שיא!' },
+  Cameroon:    { flag: '🇨🇲', fact: 'קמרון הייתה הקבוצה האפריקאית הראשונה שהגיעה לרבע גמר מונדיאל!' },
+  USA:         { flag: '🇺🇸', fact: 'ארה"ב תארח את גביע העולם 2026 יחד עם קנדה ומקסיקו!' },
+  Mexico:      { flag: '🇲🇽', fact: 'מקסיקו הגיעה 7 פעמים לרבע גמר גביע העולם!' },
+  Colombia:    { flag: '🇨🇴', fact: 'קולומביה ידועה בסגנון משחק מרהיב ומחייך!' },
+  Uruguay:     { flag: '🇺🇾', fact: 'אורוגוואי ניצחה בגביע העולם הראשון אי פעם ב-1930!' },
+  Japan:       { flag: '🇯🇵', fact: 'יפן מפתיעה בכל טורניר עולמי עם משמעת טקטית!' },
+  'South Korea': { flag: '🇰🇷', fact: 'דרום קוריאה הגיעה לחצי גמר מונדיאל 2002!' },
+};
 import InterstitialAdModal from '../../components/InterstitialAdModal';
 import { useGameState } from '../../hooks/useGameState';
 import { positionToHebrew } from '../../constants/hebrew';
@@ -84,16 +117,19 @@ const infoStyles = StyleSheet.create({
 function QuizTab({
   playerId,
   questions,
+  playerNationality,
 }: {
   playerId: string;
   questions: { question: string; answers: string[]; correctIndex: number }[];
+  playerNationality: string;
 }) {
   const router = useRouter();
   const { getPlayerProgress, answerQuestion } = useGameState();
   const progress = getPlayerProgress(playerId);
   const [currentQ, setCurrentQ] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  // 'idle' | 'correct' | 'wrong'
+  const [answerState, setAnswerState] = useState<'idle' | 'correct' | 'wrong'>('idle');
   const [showUnlockCelebration, setShowUnlockCelebration] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
 
@@ -106,60 +142,37 @@ function QuizTab({
       }
       return copy;
     };
-
     return questions.map((q) => {
       const correctAnswer = q.answers[q.correctIndex];
       const shuffledAnswers = shuffle(q.answers);
       const newCorrectIndex = shuffledAnswers.findIndex((a) => a === correctAnswer);
-      return {
-        question: q.question,
-        answers: shuffledAnswers,
-        correctIndex: newCorrectIndex,
-      };
+      return { question: q.question, answers: shuffledAnswers, correctIndex: newCorrectIndex };
     });
   }, [playerId, questions]);
-
-  const unanswered = questions
-    .map((_, i) => i)
-    .filter((i) => !progress.answeredIndices.includes(i));
 
   const handleStart = (qIndex: number) => {
     setCurrentQ(qIndex);
     setSelected(null);
-    setRevealed(false);
+    setAnswerState('idle');
   };
 
   const handleAnswer = (answerIndex: number) => {
-    if (revealed || currentQ === null) return;
-
+    if (answerState !== 'idle' || currentQ === null) return;
     const isCorrect = answerIndex === shuffledQuestions[currentQ].correctIndex;
-
-    if (!isCorrect) {
-      setSelected(answerIndex);
-      setTimeout(() => {
-        setCurrentQ(null);
-        setSelected(null);
-        setRevealed(false);
-      }, 250);
-      return;
-    }
-
     setSelected(answerIndex);
-    setRevealed(true);
+    setAnswerState(isCorrect ? 'correct' : 'wrong');
   };
 
   const handleNext = () => {
-    if (currentQ === null) return;
-    const correct = selected === shuffledQuestions[currentQ].correctIndex;
-    const willUnlock = correct && progress.correctAnswers + 1 >= 4;
+    if (currentQ === null || answerState === 'idle') return;
+    const isCorrect = answerState === 'correct';
+    const willUnlock = isCorrect && progress.correctAnswers + 1 >= 4;
 
-    if (correct) {
-      answerQuestion(playerId, currentQ, true);
-    }
+    if (isCorrect) answerQuestion(playerId, currentQ, true);
 
     setCurrentQ(null);
     setSelected(null);
-    setRevealed(false);
+    setAnswerState('idle');
 
     if (willUnlock) {
       setJustUnlocked(true);
@@ -169,16 +182,13 @@ function QuizTab({
 
   useEffect(() => {
     if (!justUnlocked || !progress.unlocked) return;
-
-    const timer = setTimeout(() => {
-      router.replace('/(tabs)/squad' as never);
-    }, 800);
-
+    const timer = setTimeout(() => router.replace('/(tabs)/squad' as never), 900);
     return () => clearTimeout(timer);
   }, [justUnlocked, progress.unlocked, router]);
 
   const correctCount = progress.correctAnswers;
   const totalAnswered = progress.answeredIndices.length;
+  const countryData = COUNTRY_DATA[playerNationality];
 
   if (progress.unlocked) {
     return (
@@ -200,16 +210,20 @@ function QuizTab({
                 פתחת את השחקן בהצלחה והוא מוכן לשחק בסגל שלך.
               </Text>
 
+              {/* Country fact bonus */}
+              {countryData && (
+                <View style={quizStyles.countryFactBox}>
+                  <Text style={quizStyles.countryFactFlag}>{countryData.flag}</Text>
+                  <Text style={quizStyles.countryFactText}>{countryData.fact}</Text>
+                </View>
+              )}
+
               <TouchableOpacity
                 style={quizStyles.celebrationPrimary}
-                onPress={() => {
-                  setShowUnlockCelebration(false);
-                  router.push('/(tabs)/squad' as never);
-                }}
+                onPress={() => { setShowUnlockCelebration(false); router.push('/(tabs)/squad' as never); }}
               >
                 <Text style={quizStyles.celebrationPrimaryText}>לעבור להסגל שלי</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={quizStyles.celebrationSecondary}
                 onPress={() => setShowUnlockCelebration(false)}
@@ -223,8 +237,12 @@ function QuizTab({
     );
   }
 
+  // ── Active question view ──
   if (currentQ !== null) {
     const q = shuffledQuestions[currentQ];
+    const isWrong = answerState === 'wrong';
+    const isCorrect = answerState === 'correct';
+
     return (
       <View style={quizStyles.questionContainer}>
         <Text style={quizStyles.questionNumber}>שאלה {currentQ + 1}/4</Text>
@@ -235,20 +253,16 @@ function QuizTab({
             let bg = Colors.card;
             let borderColor = Colors.border;
             let textColor = Colors.text;
+            let icon: string | null = null;
 
-            if (revealed) {
+            if (answerState !== 'idle') {
               if (i === q.correctIndex) {
-                bg = '#1a4a2e';
-                borderColor = Colors.green;
-                textColor = Colors.green;
+                bg = '#1a4a2e'; borderColor = Colors.green; textColor = Colors.green; icon = '✓';
               } else if (i === selected && i !== q.correctIndex) {
-                bg = '#4a1a1a';
-                borderColor = '#FF4444';
-                textColor = '#FF4444';
+                bg = '#4a1a1a'; borderColor = '#FF4444'; textColor = '#FF4444'; icon = '✗';
               }
             } else if (selected === i) {
-              bg = Colors.accent + '22';
-              borderColor = Colors.accent;
+              bg = Colors.accent + '22'; borderColor = Colors.accent;
             }
 
             return (
@@ -256,51 +270,63 @@ function QuizTab({
                 key={i}
                 style={[quizStyles.answerBtn, { backgroundColor: bg, borderColor }]}
                 onPress={() => handleAnswer(i)}
-                disabled={revealed}
+                disabled={answerState !== 'idle'}
                 activeOpacity={0.8}
               >
-                <Text style={[quizStyles.answerText, { color: textColor }]}>
-                  {ans}
-                </Text>
-                {revealed && i === q.correctIndex && (
-                  <Text style={quizStyles.answerIcon}>✓</Text>
-                )}
+                <Text style={[quizStyles.answerText, { color: textColor }]}>{ans}</Text>
+                {icon && <Text style={[quizStyles.answerIcon, { color: textColor }]}>{icon}</Text>}
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {revealed && (
-          <TouchableOpacity style={quizStyles.nextBtn} onPress={handleNext}>
-            <Text style={quizStyles.nextText}>המשך ▶</Text>
+        {/* Feedback */}
+        {isWrong && (
+          <View style={quizStyles.feedbackBox}>
+            <Text style={quizStyles.feedbackWrongTitle}>❌ לא נכון הפעם</Text>
+            <Text style={quizStyles.feedbackText}>
+              התשובה הנכונה היא: <Text style={{ color: Colors.green, fontWeight: '800' }}>{q.answers[q.correctIndex]}</Text>
+            </Text>
+            <Text style={quizStyles.feedbackHint}>תוכל לנסות שוב בפעם הבאה שתיכנס לכרטיס 💪</Text>
+          </View>
+        )}
+
+        {answerState !== 'idle' && (
+          <TouchableOpacity
+            style={[quizStyles.nextBtn, isWrong && quizStyles.nextBtnWrong]}
+            onPress={handleNext}
+          >
+            <Text style={[quizStyles.nextText, isWrong && quizStyles.nextTextWrong]}>
+              {isCorrect ? 'המשך ▶' : 'הבנתי, חזור לרשימה'}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
     );
   }
 
+  // ── Question list view ──
   return (
     <View style={quizStyles.container}>
-      {/* Progress */}
       <View style={quizStyles.progressContainer}>
-        <Text style={quizStyles.progressTitle}>
-          התקדמות: {totalAnswered}/4 שאלות · {correctCount} נכונות
-        </Text>
-        <View style={quizStyles.progressBar}>
-          <View
-            style={[quizStyles.progressFill, { width: `${(correctCount / 4) * 100}%` }]}
-          />
-        </View>
-        {correctCount >= 4 ? (
-          <Text style={quizStyles.progressHint}>🏆 השחקן נפתח!</Text>
-        ) : (
-          <Text style={quizStyles.progressHint}>
-            ענה נכון על 4 שאלות כדי לפתוח את השחקן
+        <View style={quizStyles.progressHeaderRow}>
+          <Text style={quizStyles.progressTitle}>
+            {correctCount}/4 תשובות נכונות
           </Text>
-        )}
+          {correctCount > 0 && (
+            <Text style={quizStyles.progressStars}>
+              {'⭐'.repeat(correctCount)}
+            </Text>
+          )}
+        </View>
+        <View style={quizStyles.progressBar}>
+          <View style={[quizStyles.progressFill, { width: `${(correctCount / 4) * 100}%` }]} />
+        </View>
+        <Text style={quizStyles.progressHint}>
+          {correctCount >= 4 ? '🏆 השחקן נפתח!' : `עוד ${4 - correctCount} נכונות ופתחת את השחקן`}
+        </Text>
       </View>
 
-      {/* Questions list */}
       {shuffledQuestions.map((q, i) => {
         const answered = progress.answeredIndices.includes(i);
         return (
@@ -315,7 +341,7 @@ function QuizTab({
               <Text style={quizStyles.qNum}>שאלה {i + 1}</Text>
               <Text style={quizStyles.qPreview} numberOfLines={1}>{q.question}</Text>
             </View>
-            <Text style={quizStyles.qStatus}>
+            <Text style={[quizStyles.qStatus, answered && { color: Colors.green }]}>
               {answered ? '✓' : '▶'}
             </Text>
           </TouchableOpacity>
@@ -424,6 +450,41 @@ const quizStyles = StyleSheet.create({
     backgroundColor: Colors.card,
   },
   celebrationSecondaryText: { color: Colors.text, fontWeight: '700', fontSize: Fonts.sizes.sm },
+
+  // Country fact in unlock modal
+  countryFactBox: {
+    width: '100%',
+    backgroundColor: Colors.accent + '18',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.accent + '44',
+    padding: Spacing.sm,
+    marginBottom: Spacing.base,
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: Spacing.sm,
+  },
+  countryFactFlag: { fontSize: 28 },
+  countryFactText: { color: Colors.text, fontSize: Fonts.sizes.sm, lineHeight: 20, flex: 1, fontWeight: '500' as const },
+
+  // Fail-soft feedback
+  feedbackBox: {
+    backgroundColor: '#4a1a1a',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: '#FF4444',
+    padding: Spacing.base,
+    gap: 4,
+  },
+  feedbackWrongTitle: { color: '#FF6666', fontSize: Fonts.sizes.sm, fontWeight: '800' as const },
+  feedbackText: { color: Colors.text, fontSize: Fonts.sizes.sm, lineHeight: 20 },
+  feedbackHint: { color: Colors.textMuted, fontSize: Fonts.sizes.xs, marginTop: 2 },
+  nextBtnWrong: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
+  nextTextWrong: { color: Colors.text },
+
+  // Progress
+  progressHeaderRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, marginBottom: Spacing.sm },
+  progressStars: { fontSize: 14 },
 });
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
@@ -593,7 +654,11 @@ export default function WallpaperDetailScreen() {
         )}
 
         {activeTab === 'quiz' && (
-          <QuizTab playerId={player.id} questions={player.quizQuestions} />
+          <QuizTab
+            playerId={player.id}
+            questions={player.quizQuestions}
+            playerNationality={player.nationality}
+          />
         )}
 
         {activeTab === 'wallpaper' && (

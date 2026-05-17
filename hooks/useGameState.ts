@@ -87,6 +87,11 @@ export interface GameState {
     count: number;
     lastReset: number;
   };
+  streak: {
+    current: number;
+    best: number;
+    lastPlayedDate: string; // 'YYYY-MM-DD'
+  };
 }
 
 const DEFAULT_LINEUP: Lineup = {
@@ -184,6 +189,11 @@ const DEFAULT_STATE: GameState = {
   aiGenerations: {
     count: 0,
     lastReset: Date.now(),
+  },
+  streak: {
+    current: 0,
+    best: 0,
+    lastPlayedDate: '',
   },
 };
 
@@ -323,6 +333,25 @@ export function useGameState() {
     if (prev.answeredIndices.includes(questionIndex)) return;
 
     const newCorrect = prev.correctAnswers + 1;
+
+    // Update streak
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const lastPlayed = state.streak?.lastPlayedDate ?? '';
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const prevStreak = state.streak?.current ?? 0;
+    const prevBest = state.streak?.best ?? 0;
+    let newStreak = prevStreak;
+    if (lastPlayed === todayStr) {
+      // Already played today — streak unchanged
+      newStreak = prevStreak;
+    } else if (lastPlayed === yesterday) {
+      // Consecutive day
+      newStreak = prevStreak + 1;
+    } else {
+      // Streak broken or first time
+      newStreak = 1;
+    }
+
     const next: GameState = {
       ...state,
       playerProgress: {
@@ -332,6 +361,11 @@ export function useGameState() {
           unlocked: newCorrect >= 4,
           answeredIndices: [...prev.answeredIndices, questionIndex],
         },
+      },
+      streak: {
+        current: newStreak,
+        best: Math.max(newStreak, prevBest),
+        lastPlayedDate: todayStr,
       },
     };
     save(next);
@@ -509,6 +543,10 @@ export function useGameState() {
     });
   }, [state, save]);
 
+  const getStreak = useCallback(() => {
+    return state.streak ?? { current: 0, best: 0, lastPlayedDate: '' };
+  }, [state.streak]);
+
   return {
     state,
     loaded,
@@ -523,5 +561,6 @@ export function useGameState() {
     addCoins,
     canGenerateAI,
     incrementAIUsage,
+    getStreak,
   };
 }

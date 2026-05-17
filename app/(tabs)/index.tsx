@@ -17,6 +17,7 @@ import { POPULAR_PLAYERS, PLAYERS, Player } from '../../constants/players';
 import { TEAMS, TeamInfo } from '../../constants/teams';
 import WallpaperCard from '../../components/WallpaperCard';
 import { usePlayerImages } from '../../hooks/usePlayerImages';
+import { useGameState } from '../../hooks/useGameState';
 
 const { width: W } = Dimensions.get('window');
 
@@ -70,6 +71,9 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => vo
 export default function HomeScreen() {
   const router = useRouter();
   const { images } = usePlayerImages(PLAYERS);
+  const { getStreak, getUnlockedPlayers } = useGameState();
+  const streak = getStreak();
+  const unlockedCount = getUnlockedPlayers().length;
 
   const handlePlayerPress = (player: Player) => {
     router.push(`/wallpaper/${player.id}`);
@@ -94,6 +98,27 @@ export default function HomeScreen() {
           </View>
           <View style={styles.israelBadge}>
             <Text style={styles.israelText}>🇮🇱</Text>
+          </View>
+        </View>
+
+        {/* Stats Bar */}
+        <View style={styles.statsBar}>
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>🔥</Text>
+            <Text style={styles.statValue}>{streak.current}</Text>
+            <Text style={styles.statLabel}>ימים רצופים</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>⭐</Text>
+            <Text style={styles.statValue}>{streak.best}</Text>
+            <Text style={styles.statLabel}>שיא אישי</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statEmoji}>👕</Text>
+            <Text style={styles.statValue}>{unlockedCount}</Text>
+            <Text style={styles.statLabel}>שחקנים נפתחו</Text>
           </View>
         </View>
 
@@ -195,6 +220,23 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.border,
   },
   israelText: { fontSize: 22 },
+
+  // Stats bar
+  statsBar: {
+    flexDirection: 'row',
+    marginHorizontal: Spacing.base,
+    marginBottom: Spacing.base,
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.sm + 2,
+  },
+  statItem: { flex: 1, alignItems: 'center', gap: 2 },
+  statEmoji: { fontSize: 20 },
+  statValue: { color: Colors.accent, fontSize: Fonts.sizes.lg, fontWeight: '900' },
+  statLabel: { color: Colors.textMuted, fontSize: 9, fontWeight: '600', textAlign: 'center' },
+  statDivider: { width: 1, backgroundColor: Colors.border, marginVertical: 4 },
 
   // Window card — each section in a styled container
   windowCard: {
